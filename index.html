@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>未寄出的歌 · by0628</title>
+<title>雾中来信 · by0628</title>
 <meta name="description" content="一些在深夜里写下的歌。不赶时间，慢慢听。">
 <meta name="theme-color" content="#e9edeb">
 <script>/* 主题抢先定版，避免刷新闪烁：auto 跟随系统 */
@@ -11,8 +11,8 @@
 (function(){try{var F={wenkai:'"LXGW WenKai","Noto Serif SC","Songti SC",serif',serif:'"Noto Serif SC","Songti SC","STSong","SimSun",serif',xiaowei:'"ZCOOL XiaoWei","LXGW WenKai","Noto Serif SC","Songti SC",serif',brush:'"Ma Shan Zheng","LXGW WenKai","Noto Serif SC","Songti SC",serif',system:'-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'};var f=localStorage.getItem('unsentFont')||'serif';if(F[f])document.documentElement.style.setProperty('--font',F[f]);var S={s:'.88',m:'1',l:'1.16'};var s=localStorage.getItem('unsentFontSize')||'m';if(S[s])document.documentElement.style.setProperty('--fs',S[s]);}catch(e){}})();
 </script>
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="未寄出的歌">
-<meta property="og:title" content="未寄出的歌 · by0628">
+<meta property="og:site_name" content="雾中来信">
+<meta property="og:title" content="雾中来信 · by0628">
 <meta property="og:description" content="一些在深夜里写下的歌。不赶时间，慢慢听。">
 <meta property="og:url" content="https://by0628.github.io/Music/">
 <meta property="og:image" content="https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/f4/3e/72/f43e726a-5f6c-5fa5-8b3e-5d5afd70b284/4711228312467.jpg/600x600bb.jpg">
@@ -57,7 +57,7 @@
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{min-height:100%}
   body{
-    background:linear-gradient(180deg, var(--wash) 0%, var(--wash2) 92%);
+    background:radial-gradient(58% 34% at 50% -4%, color-mix(in srgb, var(--accent-l) 36%, transparent) 0%, transparent 70%),linear-gradient(180deg, var(--wash) 0%, var(--wash2) 92%);
     color:var(--ink);
     font-family:var(--font);
     overflow-x:hidden;
@@ -71,9 +71,12 @@
     linear-gradient(180deg, var(--wash) 0%, var(--wash2) 92%)}
   main{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:11vh 24px 90px;text-align:center}
   .kicker{letter-spacing:.55em;font-size:11px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:22px}
-  h1{font-size:clamp(36px,8vw,54px);font-weight:400;letter-spacing:.18em;line-height:1.25;color:var(--ink)}
+  h1{font-size:clamp(36px,8vw,54px);font-weight:400;letter-spacing:.26em;line-height:1.25;color:var(--ink)}
   .sub{margin-top:18px;color:var(--ink-dim);font-size:15px;letter-spacing:.22em;line-height:2}
-  .rule{width:56px;height:1px;background:var(--line);margin:44px auto 10px}
+  .rule{position:relative;width:132px;height:1px;margin:44px auto 10px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+  .rule::after{content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;
+    background:var(--accent);transform:translate(-50%,-50%)}
   #status{color:var(--ink-faint);font-size:13px;letter-spacing:.18em;padding:18px 2px}
   /* APlayer — mist / Morandi theme */
   .aplayer{background:var(--card)!important;backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);
@@ -241,13 +244,29 @@
   #stage.style-paper #stageScroll p.near{opacity:.78;filter:none}
   #stage.style-paper #stageScroll p.cur{opacity:1;filter:none;text-decoration:underline;
     text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:7px}
+  /* ---------- 美化：入场动画与细节 ---------- */
+  ::selection{background:var(--accent-l);color:var(--ink)}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .kicker{animation:rise .8s cubic-bezier(.22,.8,.3,1) both}
+  h1{animation:rise .8s .07s cubic-bezier(.22,.8,.3,1) both}
+  .sub{animation:rise .8s .14s cubic-bezier(.22,.8,.3,1) both}
+  #ctlWrap{animation:rise .8s .21s cubic-bezier(.22,.8,.3,1) both}
+  .rule{animation:rise .8s .28s cubic-bezier(.22,.8,.3,1) both}
+  #player{animation:rise .9s .3s cubic-bezier(.22,.8,.3,1) both}
+  #groups{animation:rise .9s .38s cubic-bezier(.22,.8,.3,1) both}
+  #lrcPanel{animation:fadeIn .7s ease both}
+  .aplayer,#groups{transition:transform .5s cubic-bezier(.22,.8,.3,1),box-shadow .5s}
+  @media (hover:hover){ .aplayer:hover,#groups:hover{transform:translateY(-2px)} }
+  .grp-row:active{transform:scale(.99)}
+  .grp-row{transition:background .3s,color .3s,transform .15s}
 </style>
 </head>
 <body>
 <div class="grain"></div>
 <main>
   <div class="kicker">by0628 · songs</div>
-  <h1>未寄出的歌</h1>
+  <h1>雾中来信</h1>
   <p class="sub">一些在深夜里写下的歌。<br>不赶时间，慢慢听。</p>
   <div id="ctlWrap">
     <button id="setBtn" aria-haspopup="true" aria-expanded="false">版面設定<span id="setBtnSum"></span> ▾</button>
@@ -288,7 +307,6 @@
     </div>
   </div>
   <div class="rule"></div>
-  <div id="status">正在翻开歌单……</div>
   <div id="player"></div>
   <div id="groups" style="display:none"></div>
   <div id="lrcPanel"><div id="lrcScroll"></div></div>
@@ -326,7 +344,7 @@
   var CDN='https://cdn.jsdelivr.net/gh/'+OWNER+'/'+REPO+'@main/'+DIR+'/';
   var AUDIO=['mp3','m4a','wav','ogg','oga','flac','aac','opus'];
   var IMG=['jpg','jpeg','png','webp'];
-  var statusEl=document.getElementById('status');
+  var statusEl=document.getElementById('status')||{textContent:'',style:{}};/* 提示条已按要求删除，写入落到空对象上 */
 
   function ext(name){ var m=name.toLowerCase().match(/\.([a-z0-9]+)$/); return m?m[1]:''; }
   function base(name){ return name.replace(/\.[^.]+$/,''); }
