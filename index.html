@@ -1155,7 +1155,7 @@
           var prefix='/'+DIR+'/';
           if(f.name.indexOf(prefix)!==0) return;
           var rest=f.name.slice(prefix.length);
-          if(rest && rest.indexOf('/')<0) names.push(rest);
+          if(rest && rest.indexOf('/')<0) names.push({name:rest, size:f.size||0});
         });
         if(!names.length) throw new Error('empty');
         return names;
@@ -1165,7 +1165,7 @@
     return gh(API+'/contents/'+DIR)
       .then(function(r){ if(!r.ok) throw new Error('list '+r.status); return r.json(); })
       .then(function(items){
-        return (items||[]).filter(function(i){return i.type==='file';}).map(function(i){return i.name;});
+        return (items||[]).filter(function(i){return i.type==='file';}).map(function(i){return {name:i.name, size:i.size||0};});
       });
   }
   /* 两边清单取并集：jsDelivr 不限流但索引更新慢（新歌要等它刷新）；
@@ -1176,7 +1176,11 @@
       var seen={}, names=[];
       rs.forEach(function(r){
         if(!r.ok) return;
-        (r.v||[]).forEach(function(n){ if(!seen[n]){ seen[n]=1; names.push(n); } });
+        (r.v||[]).forEach(function(it){
+          if(!it || !it.name) return;
+          if(!seen[it.name]){ seen[it.name]=it; names.push(it); }
+          else if(!seen[it.name].size && it.size) seen[it.name].size=it.size; /* 两路并集时把文件大小也带上，大文件分流要用 */
+        });
       });
       if(!names.length) throw new Error('no list');
       return names;
@@ -1186,9 +1190,8 @@
     gh(API+'/branches/main').then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; })
   ])
     .then(function(res){
-      var fileNames=res[0];
       mainSha=res[1] && res[1].commit && res[1].commit.sha;
-      var files=fileNames.map(function(n){ return {name:n}; });
+      var files=res[0];
       var covers={}, lrcFiles={};
       files.forEach(function(f){
         var e=ext(f.name);
