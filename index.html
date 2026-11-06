@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>未寄出的歌 · by0628</title>
 <meta name="description" content="一些在深夜里写下的歌。不赶时间，慢慢听。">
-<meta name="theme-color" content="#0a0e1a">
+<meta name="theme-color" content="#e9edeb">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="未寄出的歌">
 <meta property="og:title" content="未寄出的歌 · by0628">
@@ -13,71 +13,72 @@
 <meta property="og:url" content="https://by0628.github.io/Music/">
 <meta property="og:image" content="https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/f4/3e/72/f43e726a-5f6c-5fa5-8b3e-5d5afd70b284/4711228312467.jpg/600x600bb.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌙%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌫️%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css">
 <style>
   :root{
-    --ink:#c9d4e8; --ink-dim:#7d8aa5; --ink-faint:#4b5872;
-    --bg:#0a0e1a; --bg2:#0d1322; --line:rgba(160,180,220,.14);
-    --accent:#8fa8d8;
+    --ink:#3a4147; --ink-dim:#7c868d; --ink-faint:#a9b2b6;
+    --line:rgba(70,84,92,.16);
+    --wash:#e9edeb;
+    --accent:#7d8b96; --accent-l:#b9c4c9; --accent-d:#57646c;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{min-height:100%}
   body{
-    background:radial-gradient(1200px 700px at 50% -10%, #16203c 0%, var(--bg2) 45%, var(--bg) 100%);
+    background:linear-gradient(180deg, var(--wash) 0%, #dde3e0 92%);
     color:var(--ink);
     font-family:"Songti SC","STSong","Noto Serif SC","SimSun",serif;
     overflow-x:hidden;
+    transition:background 1s;
   }
-  #sky{position:fixed;inset:0;z-index:0;pointer-events:none}
-  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.04;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");}
-  /* slender crescent moon */
-  .moon{position:fixed;top:8vh;right:10vw;width:56px;height:56px;border-radius:50%;z-index:0;
-    background:radial-gradient(circle at 38% 35%, #fdf6dd, #e6dbab 58%, #c9bd87);
-    box-shadow:0 0 44px 10px rgba(240,230,180,.13), 0 0 120px 46px rgba(240,230,180,.05);
-    opacity:.92;animation:moonbreathe 7s ease-in-out infinite}
-  .moon::after{content:'';position:absolute;width:52px;height:52px;border-radius:50%;
-    background:#0b1120;top:-7px;left:17px;filter:blur(1.5px)}
-  @keyframes moonbreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
-  /* accent-tinted ambience glow (progressive enhancement) */
+  /* soft Morandi ambience from the cover colour (progressive enhancement) */
   body{background:
-    radial-gradient(900px 520px at 50% 16%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%),
-    radial-gradient(1200px 700px at 50% -10%, #16203c 0%, var(--bg2) 45%, var(--bg) 100%)}
-  main{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:15vh 24px 90px}
+    radial-gradient(900px 520px at 50% 12%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--wash) 0%, #dde3e0 92%)}
+  main{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:11vh 24px 90px;text-align:center}
   .kicker{letter-spacing:.55em;font-size:11px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:22px}
-  h1{font-size:clamp(38px,8vw,58px);font-weight:400;letter-spacing:.14em;line-height:1.25;
-     background:linear-gradient(180deg,#eef2fb,#9db1d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h1{font-size:clamp(36px,8vw,54px);font-weight:400;letter-spacing:.18em;line-height:1.25;color:var(--ink)}
   .sub{margin-top:18px;color:var(--ink-dim);font-size:15px;letter-spacing:.22em;line-height:2}
-  .rule{width:56px;height:1px;background:var(--line);margin:44px 0 10px}
+  .rule{width:56px;height:1px;background:var(--line);margin:44px auto 10px}
   #status{color:var(--ink-faint);font-size:13px;letter-spacing:.18em;padding:18px 2px}
-  /* APlayer melancholy theme */
-  .aplayer{background:rgba(13,19,34,.72)!important;backdrop-filter:blur(10px);
-    border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.5);
-    font-family:inherit!important;color:var(--ink)!important}
-  .aplayer .aplayer-list{border-top:1px solid var(--line)!important}
-  .aplayer .aplayer-list ol li{border-top:1px solid rgba(160,180,220,.07)!important;color:var(--ink-dim)!important;letter-spacing:.06em}
-  .aplayer .aplayer-list ol li:hover{background:rgba(143,168,216,.08)!important}
-  .aplayer .aplayer-list ol li.aplayer-list-light{background:rgba(143,168,216,.13)!important;color:var(--ink)!important}
-  .aplayer .aplayer-list ol li .aplayer-list-author{color:var(--ink-faint)!important}
-  .aplayer .aplayer-info{border-bottom:none!important}
-  .aplayer .aplayer-info .aplayer-music .aplayer-title{color:var(--ink)!important;font-size:16px!important;letter-spacing:.08em}
-  .aplayer .aplayer-info .aplayer-music .aplayer-author{color:var(--ink-faint)!important}
-  .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar{background:rgba(160,180,220,.18)!important}
-  .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar .aplayer-loaded{background:rgba(160,180,220,.28)!important}
+  /* APlayer — mist / Morandi theme */
+  .aplayer{background:rgba(255,255,255,.55)!important;backdrop-filter:blur(14px);
+    border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 44px rgba(90,105,110,.15);
+    font-family:inherit!important;color:var(--ink)!important;text-align:left;overflow:hidden}
+  .aplayer .aplayer-body{display:flex!important;flex-direction:column;align-items:center;padding:28px 22px 12px}
+  .aplayer .aplayer-pic{float:none!important;width:196px!important;height:196px!important;border-radius:16px;
+    background-color:#101216;box-shadow:0 14px 34px rgba(60,70,75,.28);flex:none}
+  .aplayer .aplayer-info{margin:18px 0 0!important;padding:0!important;height:auto!important;width:100%;
+    border-bottom:none!important;text-align:center}
+  .aplayer .aplayer-info .aplayer-music{text-align:center;margin-bottom:10px!important}
+  .aplayer .aplayer-info .aplayer-music .aplayer-title{color:var(--ink)!important;font-size:18px!important;letter-spacing:.1em}
+  .aplayer .aplayer-info .aplayer-music .aplayer-author{color:var(--ink-faint)!important;font-size:12.5px!important}
+  .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar{background:rgba(70,84,92,.15)!important}
+  .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar .aplayer-loaded{background:rgba(70,84,92,.25)!important}
   .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar .aplayer-played{background:var(--accent)!important}
   .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar .aplayer-played .aplayer-thumb{background:var(--accent)!important;border-color:var(--accent)!important}
   .aplayer .aplayer-info .aplayer-controller .aplayer-time{color:var(--ink-faint)!important}
   .aplayer .aplayer-info .aplayer-controller .aplayer-time .aplayer-icon path{fill:var(--ink-dim)!important}
-  .aplayer .aplayer-pic .aplayer-play,.aplayer .aplayer-pic .aplayer-pause{background:rgba(20,28,48,.75)!important;border-color:rgba(200,215,245,.5)!important}
-  .aplayer .aplayer-notice{background:rgba(20,28,48,.95)!important;color:var(--ink)!important}
+  .aplayer .aplayer-pic .aplayer-play,.aplayer .aplayer-pic .aplayer-pause{background:rgba(255,255,255,.88)!important;border:none!important;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  .aplayer .aplayer-notice{background:rgba(255,255,255,.95)!important;color:var(--ink)!important}
+  .aplayer .aplayer-list{border-top:1px solid var(--line)!important;background:transparent!important}
+  .aplayer .aplayer-list ol li{border-top:1px solid rgba(70,84,92,.08)!important;color:var(--ink-dim)!important;
+    letter-spacing:.06em;padding:11px 18px!important;height:auto!important;line-height:1.5!important}
+  .aplayer .aplayer-list ol li:first-child{border-top:none!important}
+  .aplayer .aplayer-list ol li:hover{background:rgba(255,255,255,.45)!important}
+  .aplayer .aplayer-list ol li.aplayer-list-light{background:rgba(255,255,255,.65)!important;color:var(--ink)!important;
+    box-shadow:inset 3px 0 0 var(--accent)}
+  .aplayer .aplayer-list ol li .aplayer-list-index{color:var(--ink-faint)!important;margin-right:12px!important}
+  .aplayer .aplayer-list ol li .aplayer-list-author{color:var(--ink-faint)!important}
   footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
 
   /* ---------- lyrics ---------- */
   #stageBtn{display:none;margin:26px auto 0;padding:10px 26px;background:transparent;color:var(--ink-dim);
     border:1px solid var(--line);border-radius:999px;font-family:inherit;font-size:13px;letter-spacing:.35em;cursor:pointer;
     transition:all .3s}
-  #stageBtn:hover{color:var(--ink);border-color:rgba(160,180,220,.45)}
+  #stageBtn:hover{color:var(--ink);border-color:rgba(70,84,92,.4);background:rgba(255,255,255,.4)}
   #lrcPanel{display:none;margin-top:22px;height:196px;overflow:hidden;position:relative;
     -webkit-mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent);
             mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent)}
@@ -85,16 +86,16 @@
   #lrcScroll p{font-size:15px;line-height:2.15;color:var(--ink-faint);letter-spacing:.08em;cursor:pointer;
     transition:color .45s,opacity .45s,transform .45s,filter .45s;white-space:pre-wrap}
   #lrcScroll p.near{color:var(--ink-dim)}
-  #lrcScroll p.cur{color:#eef2fb;transform:scale(1.06)}
+  #lrcScroll p.cur{color:#2e353a;transform:scale(1.05)}
   #lrcNote{margin-top:22px;text-align:center;color:var(--ink-faint);font-size:12.5px;letter-spacing:.25em;display:none}
 
   /* ---------- fullscreen lyric stage ---------- */
   #stage{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;
-    background:radial-gradient(1000px 620px at 50% 30%, rgba(38,54,96,.55), rgba(7,10,20,.94) 70%);
-    backdrop-filter:blur(8px)}
+    background:linear-gradient(180deg, var(--wash) 0%, #dfe4e2 100%)}
   #stage.open{display:flex}
+  #stage::after{content:'';position:absolute;inset:0;background:rgba(242,244,242,.48);z-index:0;pointer-events:none}
   #stageBg{position:absolute;inset:-40px;z-index:0;background-size:cover;background-position:center;
-    filter:blur(46px) brightness(.42) saturate(.85);opacity:0;transition:opacity 1.2s}
+    filter:blur(48px) brightness(1.18) saturate(.6);opacity:0;transition:opacity 1.2s}
   #stageHead,#stageBody,#stageBar{position:relative;z-index:1}
   #stageHead{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;color:var(--ink-faint)}
   #stageTitle{font-size:13px;letter-spacing:.3em}
@@ -107,42 +108,32 @@
   #stageScroll{position:absolute;left:0;right:0;top:0;transition:transform .7s cubic-bezier(.22,.8,.3,1);
     padding:38vh 24px;text-align:center}
   #stageScroll p{font-size:clamp(17px,3.4vw,24px);line-height:2.5;color:var(--ink-faint);letter-spacing:.1em;cursor:pointer;
-    opacity:.45;filter:blur(1.2px);transition:all .55s;white-space:pre-wrap}
-  #stageScroll p.near{opacity:.75;filter:blur(.4px);color:var(--ink-dim)}
-  #stageScroll p.cur{opacity:1;filter:none;color:#f2f5fd;font-size:clamp(24px,5.2vw,38px);
-    text-shadow:0 0 34px rgba(160,185,240,.35)}
+    opacity:.5;filter:blur(1.2px);transition:all .55s;white-space:pre-wrap}
+  #stageScroll p.near{opacity:.8;filter:blur(.4px);color:var(--ink-dim)}
+  #stageScroll p.cur{opacity:1;filter:none;color:#2e353a;font-size:clamp(24px,5.2vw,38px)}
   #stageNote{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
     color:var(--ink-faint);letter-spacing:.3em;font-size:14px}
-  #stageBar{height:2px;background:rgba(160,180,220,.15);margin:0 24px 26px;border-radius:2px;overflow:hidden}
+  #stageBar{height:2px;background:rgba(70,84,92,.15);margin:0 24px 26px;border-radius:2px;overflow:hidden}
   #stageBarFill{height:100%;width:0%;background:var(--accent);transition:width .3s linear}
 
-  /* ---------- beautify pack ---------- */
-  :root{ --accent-l:#c7d5f2; }
-  .moon{transition:transform .3s ease-out}
-  #lrcScroll p.cur{color:var(--accent-l);text-shadow:0 0 18px var(--accent)}
-  #stageScroll p.cur{color:var(--accent-l)}
-  /* rotating vinyl */
-  .aplayer .aplayer-pic{border-radius:50%!important;overflow:hidden}
-  .aplayer .aplayer-pic .pic-rot{position:absolute;inset:0;border-radius:50%;background-size:cover;background-position:center;z-index:0}
-  .aplayer .aplayer-pic .pic-rot::before{content:'';position:absolute;inset:0;border-radius:50%;
-    background:repeating-radial-gradient(circle, rgba(0,0,0,.14) 0 1px, transparent 1px 4px)}
-  .aplayer .aplayer-pic .pic-rot::after{content:'';position:absolute;left:50%;top:50%;width:27%;height:27%;
-    transform:translate(-50%,-50%);border-radius:50%;
-    background:radial-gradient(circle,#232f4d,#0c1220 72%);border:1px solid rgba(205,220,248,.4)}
+  /* ---------- beautify pack (mist edition) ---------- */
+  #lrcScroll p.cur{color:var(--accent-d)}
+  #stageScroll p.cur{color:var(--accent-d)}
+  /* square cover layer; the pic stays black until a cover arrives */
+  .aplayer .aplayer-pic{overflow:hidden}
+  .aplayer .aplayer-pic .pic-rot{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;background-color:#101216}
   .aplayer .aplayer-pic .aplayer-button{z-index:2!important}
-  body.playing .aplayer .aplayer-pic .pic-rot{animation:spin 16s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
   /* breathing dots for instrumental gaps */
   .dots{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;gap:10px;z-index:5;pointer-events:none}
   .dots.on{display:flex}
-  .dots span{width:9px;height:9px;border-radius:50%;background:var(--accent-l);opacity:.25;
-    box-shadow:0 0 12px var(--accent);animation:breathe 1.7s ease-in-out infinite}
+  .dots span{width:9px;height:9px;border-radius:50%;background:var(--accent);opacity:.25;
+    animation:breathe 1.7s ease-in-out infinite}
   #lrcPanel.gap #lrcScroll{opacity:.3}
   #lrcScroll{transition:transform .6s cubic-bezier(.22,.8,.3,1),opacity .5s}
   .dotsline{display:flex;justify-content:center;align-items:center;gap:10px;height:48px;margin-bottom:8px;visibility:hidden}
   .dotsline.on{visibility:visible}
-  .dotsline span{width:9px;height:9px;border-radius:50%;background:var(--accent-l);opacity:.25;
-    box-shadow:0 0 12px var(--accent);animation:breathe 1.7s ease-in-out infinite}
+  .dotsline span{width:9px;height:9px;border-radius:50%;background:var(--accent);opacity:.25;
+    animation:breathe 1.7s ease-in-out infinite}
   .dotsline span:nth-child(2){animation-delay:.28s}
   .dotsline span:nth-child(3){animation-delay:.56s}
   .dots span:nth-child(2){animation-delay:.28s}
@@ -152,12 +143,12 @@
   .seg{display:flex;gap:8px}
   .seg button{background:transparent;border:1px solid var(--line);color:var(--ink-faint);border-radius:999px;
     padding:6px 14px;font-family:inherit;font-size:12px;letter-spacing:.25em;cursor:pointer;transition:all .3s}
-  .seg button.on{color:#f2f5fd;border-color:var(--accent)}
+  .seg button.on{color:#2e353a;border-color:var(--accent);background:rgba(255,255,255,.5)}
   /* stage: single-line mode */
   #stage.style-single #stageScroll p{visibility:hidden;opacity:0;filter:none}
   #stage.style-single #stageScroll p.near{visibility:visible;opacity:.5;font-size:clamp(14px,2.4vw,18px);color:var(--ink-dim)}
-  #stage.style-single #stageScroll p.cur{visibility:visible;opacity:1;color:#f4f7fe;
-    font-size:clamp(30px,6.4vw,46px);text-shadow:0 0 40px rgba(170,195,245,.4)}
+  #stage.style-single #stageScroll p.cur{visibility:visible;opacity:1;color:var(--accent-d);
+    font-size:clamp(30px,6.4vw,46px)}
   /* stage: drift mode */
   #stage.style-drift #stageScroll p{transition:all 1.15s cubic-bezier(.22,.8,.3,1)}
   #stage.style-drift #stageScroll p:nth-child(odd){transform:translateX(-7px)}
@@ -166,9 +157,7 @@
 </style>
 </head>
 <body>
-<canvas id="sky"></canvas>
 <div class="grain"></div>
-<div class="moon"></div>
 <main>
   <div class="kicker">by0628 · songs</div>
   <h1>未寄出的歌</h1>
@@ -349,12 +338,16 @@
         }
         if(!w) return;
         r=Math.round(r/w); g=Math.round(g/w); b=Math.round(b/w);
-        /* 向夜色靠拢，避免荧光色破坏气质 */
-        r=Math.round(r*0.72+24); g=Math.round(g*0.72+30); b=Math.round(b*0.72+52);
+        /* 莫蘭迪化：向自身灰度靠攏、去飽和，再派生深/淺/底色四檔 */
+        var gray=Math.round((r+g+b)/3);
+        r=Math.round(r+(gray-r)*0.55); g=Math.round(g+(gray-g)*0.55); b=Math.round(b+(gray-b)*0.55);
         var root=document.documentElement.style;
-        root.setProperty('--accent','rgb('+r+','+g+','+b+')');
-        var lr=Math.round(r+(255-r)*0.36), lg=Math.round(g+(255-g)*0.36), lb=Math.round(b+(255-b)*0.36);
+        root.setProperty('--accent','rgb('+Math.round(r*0.88)+','+Math.round(g*0.88)+','+Math.round(b*0.88)+')');
+        root.setProperty('--accent-d','rgb('+Math.round(r*0.6)+','+Math.round(g*0.6)+','+Math.round(b*0.6)+')');
+        var lr=Math.round(r+(255-r)*0.5), lg=Math.round(g+(255-g)*0.5), lb=Math.round(b+(255-b)*0.5);
         root.setProperty('--accent-l','rgb('+lr+','+lg+','+lb+')');
+        var wr=Math.round(r+(242-r)*0.87), wg=Math.round(g+(243-g)*0.87), wb=Math.round(b+(239-b)*0.87);
+        root.setProperty('--wash','rgb('+wr+','+wg+','+wb+')');
       }catch(e){ /* 取色失败就保留默认夜蓝 */ }
     };
     img.src=url;
@@ -475,8 +468,10 @@
 
   function resetTint(){
     var root=document.documentElement.style;
-    root.setProperty('--accent','#8fa8d8');
-    root.setProperty('--accent-l','#c7d5f2');
+    root.setProperty('--accent','#7d8b96');
+    root.setProperty('--accent-l','#b9c4c9');
+    root.setProperty('--accent-d','#57646c');
+    root.setProperty('--wash','#e9edeb');
   }
 
   /* ---------- 全屏样式切换 ---------- */
@@ -614,27 +609,6 @@
       statusEl.textContent='歌单暂时没打开（网络或接口限流），刷新一次试试。';
     });
 
-  /* quiet starfield: tiny stars, slow twinkle */
-  var c=document.getElementById('sky'), x=c.getContext('2d'), W, H, stars=[];
-  function resize(){
-    W=c.width=innerWidth; H=c.height=innerHeight;
-    stars=[];
-    var n=Math.min(150, Math.floor(W*H/11000));
-    for(var i=0;i<n;i++) stars.push({x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.15+0.3, p:Math.random()*6.28, s:0.25+Math.random()*0.7});
-  }
-  resize(); addEventListener('resize', resize);
-  (function tick(t){
-    x.clearRect(0,0,W,H);
-    for(var i=0;i<stars.length;i++){
-      var st=stars[i];
-      var a=0.22+0.5*(0.5+0.5*Math.sin(t*0.001*st.s+st.p));
-      x.globalAlpha=a;
-      x.fillStyle='#cdd9f2';
-      x.beginPath(); x.arc(st.x, st.y, st.r, 0, 6.283); x.fill();
-    }
-    x.globalAlpha=1;
-    requestAnimationFrame(tick);
-  })(0);
 })();
 </script>
 </body>
