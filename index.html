@@ -609,9 +609,11 @@
     if(cov){ bg.style.backgroundImage='url("'+cov+'")'; bg.style.opacity='1'; }
     else { bg.style.opacity='0'; }
   }
-  /* JSONP 小工具：给不支持 CORS 的国内接口用（脚本标签不受同源限制） */
+  /* JSONP 小工具：给不支持 CORS 的国内接口用（脚本标签不受同源限制）
+     注意：QQ 搜索接口不认 callback 参数（写了也白写、固定用 callback 包裹），只认 jsonpCallback，
+     参数名传错会让回调永远不触发、整条链卡到超时——这是「封面一直加载不出来」的真凶 */
   var jsonpSeq=0;
-  function jsonp(url, timeout){
+  function jsonp(url, timeout, cbParam){
     return new Promise(function(res, rej){
       var cb='__unsentCb'+(++jsonpSeq)+'_'+Date.now();
       var sc=document.createElement('script');
@@ -623,7 +625,7 @@
       }
       window[cb]=function(data){ cleanup(); res(data); };
       sc.onerror=function(){ cleanup(); rej(new Error('jsonp error')); };
-      sc.src=url+(url.indexOf('?')>=0 ? '&' : '?')+'callback='+cb;
+      sc.src=url+(url.indexOf('?')>=0 ? '&' : '?')+(cbParam||'callback')+'='+cb;
       document.head.appendChild(sc);
     });
   }
@@ -631,7 +633,7 @@
   function qqCover(meta, dur){
     var w=(meta.artist ? meta.artist+' ' : '')+meta.title;
     var url='https://c.y.qq.com/soso/fcgi-bin/client_search_cp?format=jsonp&p=1&n=6&aggr=1&lossless=0&flag_qc=0&w='+encodeURIComponent(w);
-    return jsonp(url).then(function(d){
+    return jsonp(url, 9000, 'jsonpCallback').then(function(d){
       var list=(d && d.data && d.data.song && d.data.song.list)||[];
       var scored=list.filter(function(x){ return x.albummid; }).map(function(x){
         var s=0;
