@@ -527,7 +527,19 @@
         return (items||[]).filter(function(i){return i.type==='file';}).map(function(i){return i.name;});
       });
   }
-  var listPromise=listViaJsdelivr().catch(function(){ return listViaGithub(); });
+  /* 两边清单取并集：jsDelivr 不限流但索引更新慢（新歌要等它刷新）；
+     GitHub 实时但有匿名限额。并集让新歌立刻出现，GitHub 被限流时还有 jsDelivr 兜底 */
+  function settle(p){ return p.then(function(v){ return {ok:true, v:v}; }, function(){ return {ok:false}; }); }
+  var listPromise=Promise.all([settle(listViaJsdelivr()), settle(listViaGithub())])
+    .then(function(rs){
+      var seen={}, names=[];
+      rs.forEach(function(r){
+        if(!r.ok) return;
+        (r.v||[]).forEach(function(n){ if(!seen[n]){ seen[n]=1; names.push(n); } });
+      });
+      if(!names.length) throw new Error('no list');
+      return names;
+    });
   Promise.all([
     listPromise,
     gh(API+'/branches/main').then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; })
@@ -562,7 +574,7 @@
       statusEl.textContent='共 '+songs.length+' 首 · 点开任意一首开始';
       ap=new APlayer({
         container:document.getElementById('player'),
-        audio:songs, theme:'#8fa8d8', lrcType:0,
+        audio:songs, theme:'#7d8b96', lrcType:0,
         listFolded:false, preload:'metadata', volume:0.85, mutex:true
       });
       /* 当前线路报错就自动顺延到下一条，直到能播为止 */
