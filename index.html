@@ -360,7 +360,15 @@
   var API='https://api.github.com/repos/'+OWNER+'/'+REPO;
   function gh(url){ return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}); }
   /* 每首歌准备多条线路，一条不通自动换下一条 */
-  function sourcesFor(enc, sha){
+  function sourcesFor(enc, sha, big){
+    /* 大文件（≥20MB）：jsDelivr 有 20MB 上限、必然 403，跳过它走 Pages/raw，少等两轮失败 */
+    if(big){
+      return [
+        DIR+'/'+enc,
+        'https://raw.githubusercontent.com/'+OWNER+'/'+REPO+'/main/'+DIR+'/'+enc,
+        'https://cdn.statically.io/gh/'+OWNER+'/'+REPO+'/main/'+DIR+'/'+enc
+      ];
+    }
     var list=[];
     if(sha) list.push('https://cdn.jsdelivr.net/gh/'+OWNER+'/'+REPO+'@'+sha+'/'+DIR+'/'+enc);
     list.push('https://cdn.jsdelivr.net/gh/'+OWNER+'/'+REPO+'@main/'+DIR+'/'+enc);
@@ -1191,7 +1199,7 @@
         .sort(function(a,b){return a.name.localeCompare(b.name,'zh');})
         .map(function(f){
           var b=base(f.name), nm=splitName(b);
-          var srcs=sourcesFor(encodeURIComponent(f.name), mainSha);
+          var srcs=sourcesFor(encodeURIComponent(f.name), mainSha, (f.size||0) >= 20*1024*1024);
           songSources.push(srcs);
           songMeta.push({artist:nm.artist, title:nm.title, file:b, lrcFile:lrcFiles[b]||null, cover:covers[b]||null});
           lyrState.push({status:'idle', lines:null});
