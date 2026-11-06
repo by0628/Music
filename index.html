@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#e9edeb">
 <script>/* 主题抢先定版，避免刷新闪烁：auto 跟随系统 */
 (function(){try{var m=localStorage.getItem('unsentTheme')||'auto';var d=(m==='dark')||(m==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');document.documentElement.setAttribute('data-tmode',m);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
-(function(){try{var F={wenkai:'"LXGW WenKai","Songti SC","STSong",serif',serif:'"Noto Serif SC","Songti SC","STSong","SimSun",serif',xiaowei:'"ZCOOL XiaoWei","Songti SC","STSong",serif',brush:'"Ma Shan Zheng","LXGW WenKai","Songti SC",serif',system:'-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'};var f=localStorage.getItem('unsentFont')||'serif';if(F[f])document.documentElement.style.setProperty('--font',F[f]);var S={s:'.88',m:'1',l:'1.16'};var s=localStorage.getItem('unsentFontSize')||'m';if(S[s])document.documentElement.style.setProperty('--fs',S[s]);}catch(e){}})();
+(function(){try{var F={wenkai:'"LXGW WenKai","Noto Serif SC","Songti SC",serif',serif:'"Noto Serif SC","Songti SC","STSong","SimSun",serif',xiaowei:'"ZCOOL XiaoWei","LXGW WenKai","Noto Serif SC","Songti SC",serif',brush:'"Ma Shan Zheng","LXGW WenKai","Noto Serif SC","Songti SC",serif',system:'-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'};var f=localStorage.getItem('unsentFont')||'serif';if(F[f])document.documentElement.style.setProperty('--font',F[f]);var S={s:'.88',m:'1',l:'1.16'};var s=localStorage.getItem('unsentFontSize')||'m';if(S[s])document.documentElement.style.setProperty('--fs',S[s]);}catch(e){}})();
 </script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="未寄出的歌">
@@ -183,10 +183,22 @@
     padding:6px 14px;font-family:inherit;font-size:12px;letter-spacing:.25em;cursor:pointer;transition:all .3s;
     box-shadow:inset 0 1px 0 var(--glass-hi)}
   .seg button.on{color:var(--ink);border-color:var(--accent);background:var(--row-on)}
-  .theme-seg{justify-content:center;margin-top:26px}
-  .ctl-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:12px}
-  .ctl-lab{font-size:11px;letter-spacing:.3em;color:var(--ink-faint);margin-left:10px}
-  .ctl-lab:first-child{margin-left:0}
+  /* 版面设定面板：一个按钮收起全部选项，点开是分组玻璃面板 */
+  #ctlWrap{position:relative;display:flex;justify-content:center;margin-top:26px;z-index:30}
+  #setBtn{background:var(--card);backdrop-filter:blur(12px) saturate(1.4);-webkit-backdrop-filter:blur(12px) saturate(1.4);
+    border:1px solid var(--glass-brd);color:var(--ink-dim);border-radius:999px;
+    padding:8px 18px;font-family:inherit;font-size:12.5px;letter-spacing:.25em;cursor:pointer;transition:all .3s;
+    box-shadow:inset 0 1px 0 var(--glass-hi), var(--shadow)}
+  #setBtn:hover{color:var(--ink)}
+  #setBtnSum{color:var(--ink-faint);letter-spacing:.12em}
+  #setPanel{position:absolute;top:calc(100% + 10px);left:50%;transform:translate(-50%,-6px);
+    width:min(92vw,368px);background:var(--card);backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);
+    border:1px solid var(--glass-brd);border-radius:20px;box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi);
+    padding:4px 20px 8px;text-align:left;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;z-index:31}
+  #setPanel.open{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+  .set-group{padding:12px 0;border-bottom:1px solid var(--line)}
+  .set-group:last-child{border-bottom:none}
+  .set-lab{font-size:11px;letter-spacing:.4em;color:var(--ink-dim);margin-bottom:9px}
   /* stage: single-line mode */
   #stage.style-single #stageScroll p{visibility:hidden;opacity:0;filter:none}
   #stage.style-single #stageScroll p.near{visibility:visible;opacity:.5;font-size:clamp(calc(14px * var(--fs)),calc(2.4vw * var(--fs)),calc(18px * var(--fs)));color:var(--ink-dim)}
@@ -219,25 +231,42 @@
   <div class="kicker">by0628 · songs</div>
   <h1>未寄出的歌</h1>
   <p class="sub">一些在深夜里写下的歌。<br>不赶时间，慢慢听。</p>
-  <div class="seg theme-seg" id="themeSeg">
-    <button data-mode="auto">自动</button>
-    <button data-mode="light">浅色</button>
-    <button data-mode="dark">深色</button>
-  </div>
-  <div class="ctl-row">
-    <span class="ctl-lab">字体</span>
-    <div class="seg" id="fontSeg">
-      <button data-f="wenkai">文楷</button>
-      <button data-f="serif">宋体</button>
-      <button data-f="xiaowei">小薇</button>
-      <button data-f="brush">书法</button>
-      <button data-f="system">系统</button>
-    </div>
-    <span class="ctl-lab">字号</span>
-    <div class="seg" id="sizeSeg">
-      <button data-s="s">小</button>
-      <button data-s="m">中</button>
-      <button data-s="l">大</button>
+  <div id="ctlWrap">
+    <button id="setBtn" aria-haspopup="true" aria-expanded="false">版面設定<span id="setBtnSum"></span> ▾</button>
+    <div id="setPanel">
+      <div class="set-group">
+        <div class="set-lab">外观</div>
+        <div class="seg" id="themeSeg">
+          <button data-mode="auto">自动</button>
+          <button data-mode="light">浅色</button>
+          <button data-mode="dark">深色</button>
+        </div>
+      </div>
+      <div class="set-group">
+        <div class="set-lab">字体</div>
+        <div class="seg" id="fontSeg">
+          <button data-f="wenkai">文楷</button>
+          <button data-f="serif">宋体</button>
+          <button data-f="xiaowei">小薇</button>
+          <button data-f="brush">书法</button>
+          <button data-f="system">系统</button>
+        </div>
+      </div>
+      <div class="set-group">
+        <div class="set-lab">字号</div>
+        <div class="seg" id="sizeSeg">
+          <button data-s="s">小</button>
+          <button data-s="m">中</button>
+          <button data-s="l">大</button>
+        </div>
+      </div>
+      <div class="set-group">
+        <div class="set-lab">语言</div>
+        <div class="seg" id="langSeg">
+          <button data-l="simp">简体</button>
+          <button data-l="trad">繁体</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="rule"></div>
@@ -476,7 +505,7 @@
     }
     lines.forEach(function(l,i){
       var p=document.createElement('p');
-      p.textContent=l.text;
+      p.textContent=T(l.text);
       p.addEventListener('click', function(){ if(ap){ ap.audio.currentTime=l.t+0.01; ap.play(); } });
       container.appendChild(p);
     });
@@ -487,7 +516,7 @@
     if(!st || st.status!=='done'){ lrcPanel.style.display='none'; lrcNote.style.display='none'; stageNote.style.display='none'; return; }
     if(!st.lines.length){
       lrcPanel.style.display='none';
-      lrcNote.textContent='这首歌还没有歌词 · 纯享旋律';
+      lrcNote.textContent=T('这首歌还没有歌词 · 纯享旋律');
       lrcNote.style.display='block';
       stageNote.style.display='flex';
       stageScroll.innerHTML='';
@@ -594,7 +623,7 @@
 
   /* 字体与字号切换：字体走 CDN 分片按字加载（不整包装），选择会被记住 */
   (function(){
-    var FONTS={wenkai:'"LXGW WenKai","Songti SC","STSong",serif',serif:'"Noto Serif SC","Songti SC","STSong","SimSun",serif',xiaowei:'"ZCOOL XiaoWei","Songti SC","STSong",serif',brush:'"Ma Shan Zheng","LXGW WenKai","Songti SC",serif',system:'-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'};
+    var FONTS={wenkai:'"LXGW WenKai","Noto Serif SC","Songti SC",serif',serif:'"Noto Serif SC","Songti SC","STSong","SimSun",serif',xiaowei:'"ZCOOL XiaoWei","LXGW WenKai","Noto Serif SC","Songti SC",serif',brush:'"Ma Shan Zheng","LXGW WenKai","Noto Serif SC","Songti SC",serif',system:'-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'};
     var SIZES={s:'.88',m:'1',l:'1.16'};
     var fseg=document.getElementById('fontSeg'), sseg=document.getElementById('sizeSeg');
     var f='serif', s='m';
@@ -622,6 +651,148 @@
       apply();
     });
     apply();
+  })();
+
+  /* 简繁切换：繁体时懒加载 OpenCC（cn→tw），歌词、歌名与界面文案统一转换；
+     切回简体时歌词按原始数据重建、静态文案按保存的原文还原。转换库加载失败就静默保持简体 */
+  (function(){
+    var seg=document.getElementById('langSeg');
+    var lang='simp';
+    try{ lang=localStorage.getItem('unsentLang')||'simp'; }catch(e){}
+    if(lang!=='trad') lang='simp';
+    var conv=null, convLoading=false;
+    function T(s){
+      if(lang==='trad' && conv && typeof s==='string'){ try{ return conv(s); }catch(e){ return s; } }
+      return s;
+    }
+    window.T=T;
+    function mark(){
+      if(!seg) return;
+      var bs=seg.querySelectorAll('button');
+      for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-l')===lang);
+    }
+    /* 静态文案的文本节点 walker：只碰页眉设定区、全屏顶栏、副标题、标题、页脚与全屏按钮；
+       不碰播放器本体和歌词容器（歌词由 renderLyrics 经 T() 重建）。
+       #setBtnSum 由设定面板自己经 T() 维护，walker 跳过免得还原时串字 */
+    var savedTexts=new Map();
+    function nodeFilter(node){
+      if(!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      var p=node.parentElement;
+      if(p && p.id==='setBtnSum') return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+    function collectTexts(root){
+      var out=[], walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, nodeFilter), n;
+      while((n=walker.nextNode())) out.push(n);
+      return out;
+    }
+    function staticRoots(){
+      var roots=[];
+      ['ctlWrap','stageHead','stageBtn'].forEach(function(id){
+        var el=document.getElementById(id); if(el) roots.push(el);
+      });
+      var ft=document.querySelector('footer'); if(ft) roots.push(ft);
+      var sb=document.querySelector('.sub'); if(sb) roots.push(sb);
+      var h1=document.querySelector('h1'); if(h1) roots.push(h1);
+      return roots;
+    }
+    function applyStatic(){
+      var roots=staticRoots();
+      if(lang==='trad'){
+        if(!conv) return;
+        roots.forEach(function(root){
+          collectTexts(root).forEach(function(node){
+            if(!savedTexts.has(node)) savedTexts.set(node, node.nodeValue);
+            node.nodeValue=T(node.nodeValue);
+          });
+        });
+      }else{
+        roots.forEach(function(root){
+          collectTexts(root).forEach(function(node){
+            if(savedTexts.has(node)) node.nodeValue=savedTexts.get(node);
+          });
+        });
+        savedTexts.clear();
+      }
+    }
+    /* 播放器里的歌名/歌手由 APlayer 按原始数据渲染，这里按当前语言重写一遍 */
+    function refreshLangDOM(){
+      try{
+        if(!songMeta || !songMeta.length) return;
+        var titles=document.querySelectorAll('.aplayer-list-title');
+        var authors=document.querySelectorAll('.aplayer-list-author');
+        for(var i=0;i<titles.length && i<songMeta.length;i++) titles[i].textContent=T(songMeta[i].title);
+        for(var j=0;j<authors.length && j<songMeta.length;j++) authors[j].textContent=T(songMeta[j].artist||'');
+        var cur=songMeta[curIdx];
+        if(cur){
+          var tEl=document.querySelector('.aplayer-title'); if(tEl) tEl.textContent=T(cur.title);
+          var aEl=document.querySelector('.aplayer-author'); if(aEl) aEl.textContent=T(cur.artist||'');
+          var stEl=document.getElementById('stageTitle');
+          if(stEl) stEl.textContent=T((cur.artist ? cur.artist+' - ' : '')+cur.title);
+        }
+      }catch(e){}
+    }
+    window.refreshLangDOM=refreshLangDOM;
+    function applyAll(){
+      mark();
+      if(lang==='trad' && !conv){ ensureConv(); return; }
+      applyStatic();
+      if(ap){ try{ renderLyrics(); }catch(e){} }
+      refreshLangDOM();
+    }
+    function ensureConv(){
+      if(conv){ applyAll(); return; }
+      if(convLoading) return;
+      convLoading=true;
+      var sc=document.createElement('script');
+      sc.src='https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/cn2t.js';
+      sc.onload=function(){
+        convLoading=false;
+        try{ if(window.OpenCC && window.OpenCC.Converter) conv=window.OpenCC.Converter({from:'cn',to:'tw'}); }catch(e){ conv=null; }
+        if(conv) applyAll();
+      };
+      sc.onerror=function(){ convLoading=false; };
+      document.head.appendChild(sc);
+    }
+    if(seg) seg.addEventListener('click', function(e){
+      var b=e.target.closest ? e.target.closest('button') : null;
+      if(!b) return;
+      lang=b.getAttribute('data-l')==='trad' ? 'trad' : 'simp';
+      try{ localStorage.setItem('unsentLang', lang); }catch(err){}
+      applyAll();
+    });
+    applyAll();
+  })();
+
+  /* 版面设定面板：按钮点开下拉、点外部或 Esc 关闭；按钮上的摘要跟随字体/字号选择刷新 */
+  (function(){
+    var wrap=document.getElementById('ctlWrap'), btn=document.getElementById('setBtn'),
+        panel=document.getElementById('setPanel'), sum=document.getElementById('setBtnSum');
+    if(!wrap || !btn || !panel) return;
+    var FLAB={wenkai:'文楷',serif:'宋体',xiaowei:'小薇',brush:'书法',system:'系统'};
+    var SLAB={s:'小',m:'中',l:'大'};
+    function refreshSum(){
+      if(!sum) return;
+      var f='serif', s='m';
+      try{ f=localStorage.getItem('unsentFont')||'serif'; s=localStorage.getItem('unsentFontSize')||'m'; }catch(e){}
+      var raw=' · '+(FLAB[f]||'宋体')+' · '+(SLAB[s]||'中');
+      sum.textContent=(window.T ? window.T(raw) : raw);
+    }
+    function setOpen(open){
+      panel.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      setOpen(!panel.classList.contains('open'));
+    });
+    panel.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(e.target.closest && e.target.closest('button')) refreshSum();
+    });
+    document.addEventListener('click', function(){ setOpen(false); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') setOpen(false); });
+    refreshSum();
   })();
 
   /* ---------- 全屏样式切换 ---------- */
@@ -718,10 +889,10 @@
           return s;
         });
       if(!songs.length){
-        statusEl.textContent='歌单还空着——第一首歌，正在来的路上。';
+        statusEl.textContent=T('歌单还空着——第一首歌，正在来的路上。');
         return;
       }
-      statusEl.textContent='共 '+songs.length+' 首 · 点开任意一首开始';
+      statusEl.textContent=T('共 '+songs.length+' 首 · 点开任意一首开始');
       ap=new APlayer({
         container:document.getElementById('player'),
         audio:songs, theme:'#7d8b96', lrcType:0,
@@ -747,7 +918,8 @@
       });
       ap.on('listswitch', function(e){
         curIdx=e.index; curLine=-1;
-        stageTitle.textContent=songMeta[curIdx] ? (songMeta[curIdx].artist ? songMeta[curIdx].artist+' - ' : '')+songMeta[curIdx].title : '';
+        stageTitle.textContent=T(songMeta[curIdx] ? (songMeta[curIdx].artist ? songMeta[curIdx].artist+' - ' : '')+songMeta[curIdx].title : '');
+        if(window.refreshLangDOM) window.refreshLangDOM();
         renderLyrics();
         loadLyrics(curIdx);
         loadCover(curIdx, false);
@@ -755,7 +927,7 @@
         if(songMeta[curIdx].cover) tintFromCover(songMeta[curIdx].cover); else resetTint();
         applyStageBg();
       });
-      stageTitle.textContent=(songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title;
+      stageTitle.textContent=T((songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title);
       stageBtn.style.display='block';
       loadCover(0, false);
       applyStageBg();
@@ -768,7 +940,7 @@
       setTimeout(function(){ loadLyrics(ap.list.index); }, 3500);
     })
     .catch(function(){
-      statusEl.textContent='歌单暂时没打开（网络或接口限流），刷新一次试试。';
+      statusEl.textContent=T('歌单暂时没打开（网络或接口限流），刷新一次试试。');
     });
 
 })();
