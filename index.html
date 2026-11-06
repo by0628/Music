@@ -6,6 +6,9 @@
 <title>未寄出的歌 · by0628</title>
 <meta name="description" content="一些在深夜里写下的歌。不赶时间，慢慢听。">
 <meta name="theme-color" content="#e9edeb">
+<script>/* 主题抢先定版，避免刷新闪烁：auto 跟随系统 */
+(function(){try{var m=localStorage.getItem('unsentTheme')||'auto';var d=(m==='dark')||(m==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');document.documentElement.setAttribute('data-tmode',m);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+</script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="未寄出的歌">
 <meta property="og:title" content="未寄出的歌 · by0628">
@@ -19,13 +22,34 @@
   :root{
     --ink:#3a4147; --ink-dim:#7c868d; --ink-faint:#a9b2b6;
     --line:rgba(70,84,92,.16);
-    --wash:#e9edeb;
+    --wash:#e9edeb; --wash2:#dde3e0;
     --accent:#7d8b96; --accent-l:#b9c4c9; --accent-d:#57646c;
+    --card:rgba(255,255,255,.55);
+    --glass-brd:rgba(255,255,255,.65);
+    --glass-hi:rgba(255,255,255,.55);
+    --veil:rgba(242,244,242,.48);
+    --stagebg-filter:blur(48px) brightness(1.18) saturate(.6);
+    --row-hover:rgba(255,255,255,.45);
+    --row-on:rgba(255,255,255,.65);
+    --shadow:0 18px 44px rgba(90,105,110,.15);
+  }
+  :root[data-theme="dark"]{
+    --ink:#dde3e6; --ink-dim:#93a0a6; --ink-faint:#5f6d73;
+    --line:rgba(200,215,220,.15);
+    --wash:#171d21; --wash2:#10151a;
+    --card:rgba(22,28,33,.55);
+    --glass-brd:rgba(255,255,255,.14);
+    --glass-hi:rgba(255,255,255,.14);
+    --veil:rgba(9,12,15,.5);
+    --stagebg-filter:blur(48px) brightness(.5) saturate(.7);
+    --row-hover:rgba(255,255,255,.06);
+    --row-on:rgba(255,255,255,.1);
+    --shadow:0 18px 44px rgba(0,0,0,.45);
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{min-height:100%}
   body{
-    background:linear-gradient(180deg, var(--wash) 0%, #dde3e0 92%);
+    background:linear-gradient(180deg, var(--wash) 0%, var(--wash2) 92%);
     color:var(--ink);
     font-family:"Songti SC","STSong","Noto Serif SC","SimSun",serif;
     overflow-x:hidden;
@@ -36,7 +60,7 @@
   /* soft Morandi ambience from the cover colour (progressive enhancement) */
   body{background:
     radial-gradient(900px 520px at 50% 12%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%),
-    linear-gradient(180deg, var(--wash) 0%, #dde3e0 92%)}
+    linear-gradient(180deg, var(--wash) 0%, var(--wash2) 92%)}
   main{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:11vh 24px 90px;text-align:center}
   .kicker{letter-spacing:.55em;font-size:11px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:22px}
   h1{font-size:clamp(36px,8vw,54px);font-weight:400;letter-spacing:.18em;line-height:1.25;color:var(--ink)}
@@ -44,9 +68,13 @@
   .rule{width:56px;height:1px;background:var(--line);margin:44px auto 10px}
   #status{color:var(--ink-faint);font-size:13px;letter-spacing:.18em;padding:18px 2px}
   /* APlayer — mist / Morandi theme */
-  .aplayer{background:rgba(255,255,255,.55)!important;backdrop-filter:blur(14px);
-    border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 44px rgba(90,105,110,.15);
+  .aplayer{background:var(--card)!important;backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);
+    border:1px solid var(--glass-brd);border-radius:26px;position:relative;
+    box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi), inset 0 -1px 0 rgba(255,255,255,.08);
     font-family:inherit!important;color:var(--ink)!important;text-align:left;overflow:hidden}
+  .aplayer::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:linear-gradient(180deg, var(--glass-hi), transparent 34%);opacity:.35}
+  .aplayer .aplayer-body,.aplayer .aplayer-list{position:relative;z-index:1}
   .aplayer .aplayer-body{display:flex!important;flex-direction:column;align-items:center;padding:28px 22px 12px}
   .aplayer .aplayer-pic{float:none!important;width:196px!important;height:196px!important;border-radius:16px;
     background-color:#101216;box-shadow:0 14px 34px rgba(60,70,75,.28);flex:none}
@@ -62,23 +90,24 @@
   .aplayer .aplayer-info .aplayer-controller .aplayer-time{color:var(--ink-faint)!important}
   .aplayer .aplayer-info .aplayer-controller .aplayer-time .aplayer-icon path{fill:var(--ink-dim)!important}
   .aplayer .aplayer-pic .aplayer-play,.aplayer .aplayer-pic .aplayer-pause{background:rgba(255,255,255,.88)!important;border:none!important;box-shadow:0 4px 14px rgba(0,0,0,.25)}
-  .aplayer .aplayer-notice{background:rgba(255,255,255,.95)!important;color:var(--ink)!important}
+  .aplayer .aplayer-notice{background:var(--row-on)!important;color:var(--ink)!important;backdrop-filter:blur(12px)}
   .aplayer .aplayer-list{border-top:1px solid var(--line)!important;background:transparent!important}
   .aplayer .aplayer-list ol li{border-top:1px solid rgba(70,84,92,.08)!important;color:var(--ink-dim)!important;
     letter-spacing:.06em;padding:11px 18px!important;height:auto!important;line-height:1.5!important}
   .aplayer .aplayer-list ol li:first-child{border-top:none!important}
-  .aplayer .aplayer-list ol li:hover{background:rgba(255,255,255,.45)!important}
-  .aplayer .aplayer-list ol li.aplayer-list-light{background:rgba(255,255,255,.65)!important;color:var(--ink)!important;
+  .aplayer .aplayer-list ol li:hover{background:var(--row-hover)!important}
+  .aplayer .aplayer-list ol li.aplayer-list-light{background:var(--row-on)!important;color:var(--ink)!important;
     box-shadow:inset 3px 0 0 var(--accent)}
   .aplayer .aplayer-list ol li .aplayer-list-index{color:var(--ink-faint)!important;margin-right:12px!important}
   .aplayer .aplayer-list ol li .aplayer-list-author{color:var(--ink-faint)!important}
   footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
 
   /* ---------- lyrics ---------- */
-  #stageBtn{display:none;margin:26px auto 0;padding:10px 26px;background:transparent;color:var(--ink-dim);
-    border:1px solid var(--line);border-radius:999px;font-family:inherit;font-size:13px;letter-spacing:.35em;cursor:pointer;
-    transition:all .3s}
-  #stageBtn:hover{color:var(--ink);border-color:rgba(70,84,92,.4);background:rgba(255,255,255,.4)}
+  #stageBtn{display:none;margin:26px auto 0;padding:10px 26px;background:var(--card);color:var(--ink-dim);
+    backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);
+    border:1px solid var(--glass-brd);border-radius:999px;font-family:inherit;font-size:13px;letter-spacing:.35em;cursor:pointer;
+    box-shadow:inset 0 1px 0 var(--glass-hi);transition:all .3s}
+  #stageBtn:hover{color:var(--ink)}
   #lrcPanel{display:none;margin-top:22px;height:196px;overflow:hidden;position:relative;
     -webkit-mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent);
             mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent)}
@@ -91,11 +120,11 @@
 
   /* ---------- fullscreen lyric stage ---------- */
   #stage{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;
-    background:linear-gradient(180deg, var(--wash) 0%, #dfe4e2 100%)}
+    background:linear-gradient(180deg, var(--wash) 0%, var(--wash2) 100%)}
   #stage.open{display:flex}
-  #stage::after{content:'';position:absolute;inset:0;background:rgba(242,244,242,.48);z-index:0;pointer-events:none}
+  #stage::after{content:'';position:absolute;inset:0;background:var(--veil);z-index:0;pointer-events:none}
   #stageBg{position:absolute;inset:-40px;z-index:0;background-size:cover;background-position:center;
-    filter:blur(48px) brightness(1.18) saturate(.6);opacity:0;transition:opacity 1.2s}
+    filter:var(--stagebg-filter);opacity:0;transition:opacity 1.2s}
   #stageHead,#stageBody,#stageBar{position:relative;z-index:1}
   #stageHead{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;color:var(--ink-faint)}
   #stageTitle{font-size:13px;letter-spacing:.3em}
@@ -140,10 +169,13 @@
   .dots span:nth-child(3){animation-delay:.56s}
   @keyframes breathe{0%,100%{opacity:.18;transform:scale(.8)}50%{opacity:.85;transform:scale(1.25)}}
   /* stage style switcher */
-  .seg{display:flex;gap:8px}
-  .seg button{background:transparent;border:1px solid var(--line);color:var(--ink-faint);border-radius:999px;
-    padding:6px 14px;font-family:inherit;font-size:12px;letter-spacing:.25em;cursor:pointer;transition:all .3s}
-  .seg button.on{color:#2e353a;border-color:var(--accent);background:rgba(255,255,255,.5)}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg button{background:var(--card);backdrop-filter:blur(12px) saturate(1.4);-webkit-backdrop-filter:blur(12px) saturate(1.4);
+    border:1px solid var(--glass-brd);color:var(--ink-faint);border-radius:999px;
+    padding:6px 14px;font-family:inherit;font-size:12px;letter-spacing:.25em;cursor:pointer;transition:all .3s;
+    box-shadow:inset 0 1px 0 var(--glass-hi)}
+  .seg button.on{color:var(--ink);border-color:var(--accent);background:var(--row-on)}
+  .theme-seg{justify-content:center;margin-top:26px}
   /* stage: single-line mode */
   #stage.style-single #stageScroll p{visibility:hidden;opacity:0;filter:none}
   #stage.style-single #stageScroll p.near{visibility:visible;opacity:.5;font-size:clamp(14px,2.4vw,18px);color:var(--ink-dim)}
@@ -154,6 +186,20 @@
   #stage.style-drift #stageScroll p:nth-child(odd){transform:translateX(-7px)}
   #stage.style-drift #stageScroll p:nth-child(even){transform:translateX(7px)}
   #stage.style-drift #stageScroll p.cur{transform:translateY(-4px);letter-spacing:.2em}
+  /* stage: tide mode — lines swell like a tide as they approach */
+  #stage.style-tide #stageScroll p{transform:scale(.93);opacity:.38;transition:all .9s cubic-bezier(.22,.8,.3,1)}
+  #stage.style-tide #stageScroll p.near{transform:scale(1.03);opacity:.8}
+  #stage.style-tide #stageScroll p.cur{transform:scale(1.12);opacity:1}
+  /* stage: cinema mode — one subtitle line, low and wide */
+  #stage.style-cinema #stageScroll p{visibility:hidden;opacity:0;filter:none}
+  #stage.style-cinema #stageScroll p.cur{visibility:visible;opacity:1;color:var(--accent-d);
+    font-size:clamp(25px,5.6vw,40px);letter-spacing:.26em;border-top:1px solid var(--accent);padding-top:20px}
+  /* stage: paper mode — printed page, left aligned, accent underline */
+  #stage.style-paper #stageScroll{text-align:left;padding-left:9vw;padding-right:9vw}
+  #stage.style-paper #stageScroll p{filter:none;opacity:.48;line-height:2.3}
+  #stage.style-paper #stageScroll p.near{opacity:.78;filter:none}
+  #stage.style-paper #stageScroll p.cur{opacity:1;filter:none;text-decoration:underline;
+    text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:7px}
 </style>
 </head>
 <body>
@@ -162,6 +208,11 @@
   <div class="kicker">by0628 · songs</div>
   <h1>未寄出的歌</h1>
   <p class="sub">一些在深夜里写下的歌。<br>不赶时间，慢慢听。</p>
+  <div class="seg theme-seg" id="themeSeg">
+    <button data-mode="auto">自动</button>
+    <button data-mode="light">浅色</button>
+    <button data-mode="dark">深色</button>
+  </div>
   <div class="rule"></div>
   <div id="status">正在翻开歌单……</div>
   <div id="player"></div>
@@ -179,6 +230,9 @@
       <button data-style="classic" class="on">夜航</button>
       <button data-style="drift">浮名</button>
       <button data-style="single">独白</button>
+      <button data-style="tide">潮汐</button>
+      <button data-style="cinema">影院</button>
+      <button data-style="paper">纸上</button>
     </div>
     <button id="stageClose" title="关闭">✕</button>
   </div>
@@ -341,13 +395,8 @@
         /* 莫蘭迪化：向自身灰度靠攏、去飽和，再派生深/淺/底色四檔 */
         var gray=Math.round((r+g+b)/3);
         r=Math.round(r+(gray-r)*0.55); g=Math.round(g+(gray-g)*0.55); b=Math.round(b+(gray-b)*0.55);
-        var root=document.documentElement.style;
-        root.setProperty('--accent','rgb('+Math.round(r*0.88)+','+Math.round(g*0.88)+','+Math.round(b*0.88)+')');
-        root.setProperty('--accent-d','rgb('+Math.round(r*0.6)+','+Math.round(g*0.6)+','+Math.round(b*0.6)+')');
-        var lr=Math.round(r+(255-r)*0.5), lg=Math.round(g+(255-g)*0.5), lb=Math.round(b+(255-b)*0.5);
-        root.setProperty('--accent-l','rgb('+lr+','+lg+','+lb+')');
-        var wr=Math.round(r+(242-r)*0.87), wg=Math.round(g+(243-g)*0.87), wb=Math.round(b+(239-b)*0.87);
-        root.setProperty('--wash','rgb('+wr+','+wg+','+wb+')');
+        curTint={r:r, g:g, b:b};
+        applyVars();
       }catch(e){ /* 取色失败就保留默认夜蓝 */ }
     };
     img.src=url;
@@ -466,13 +515,55 @@
   }
   setInterval(function(){ syncLyrics(false); }, 200);
 
-  function resetTint(){
+  function resetTint(){ curTint=null; applyVars(); }
+
+  /* 莫蘭迪色按深/淺主題派生：淺色往白裡調，深色往黑裡沉 */
+  var curTint=null;
+  function mixc(c, t, f){ return Math.round(c+(t-c)*f); }
+  function applyVars(){
+    var dark=document.documentElement.getAttribute('data-theme')==='dark';
+    var c=curTint||{r:125, g:139, b:150};
     var root=document.documentElement.style;
-    root.setProperty('--accent','#7d8b96');
-    root.setProperty('--accent-l','#b9c4c9');
-    root.setProperty('--accent-d','#57646c');
-    root.setProperty('--wash','#e9edeb');
+    function rgb(r,g,b){ return 'rgb('+r+','+g+','+b+')'; }
+    if(dark){
+      root.setProperty('--accent', rgb(mixc(c.r,255,.18), mixc(c.g,255,.18), mixc(c.b,255,.18)));
+      root.setProperty('--accent-d', rgb(mixc(c.r,255,.58), mixc(c.g,255,.58), mixc(c.b,255,.58)));
+      root.setProperty('--accent-l', rgb(mixc(c.r,255,.32), mixc(c.g,255,.32), mixc(c.b,255,.32)));
+      root.setProperty('--wash', rgb(mixc(c.r,14,.84), mixc(c.g,19,.84), mixc(c.b,24,.84)));
+    }else{
+      root.setProperty('--accent', rgb(Math.round(c.r*.88), Math.round(c.g*.88), Math.round(c.b*.88)));
+      root.setProperty('--accent-d', rgb(Math.round(c.r*.6), Math.round(c.g*.6), Math.round(c.b*.6)));
+      root.setProperty('--accent-l', rgb(mixc(c.r,255,.5), mixc(c.g,255,.5), mixc(c.b,255,.5)));
+      root.setProperty('--wash', rgb(mixc(c.r,242,.87), mixc(c.g,243,.87), mixc(c.b,239,.87)));
+    }
   }
+
+  /* 主题切换：自动（跟随系统）/ 浅色 / 深色，选择会被记住 */
+  (function(){
+    var seg=document.getElementById('themeSeg');
+    if(!seg) return;
+    var mq=window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    var mode=document.documentElement.getAttribute('data-tmode')||'auto';
+    function resolve(){
+      var d=(mode==='dark')||(mode==='auto'&&mq&&mq.matches);
+      document.documentElement.setAttribute('data-theme', d?'dark':'light');
+      var meta=document.querySelector('meta[name="theme-color"]');
+      if(meta) meta.setAttribute('content', d?'#171d21':'#e9edeb');
+      var btns=seg.querySelectorAll('button');
+      for(var i=0;i<btns.length;i++) btns[i].classList.toggle('on', btns[i].getAttribute('data-mode')===mode);
+      applyVars();
+    }
+    seg.addEventListener('click', function(e){
+      var b=e.target.closest ? e.target.closest('button') : null;
+      if(!b) return;
+      mode=b.getAttribute('data-mode');
+      try{ localStorage.setItem('unsentTheme', mode); }catch(err){}
+      document.documentElement.setAttribute('data-tmode', mode);
+      resolve();
+    });
+    if(mq && mq.addEventListener) mq.addEventListener('change', function(){ if(mode==='auto') resolve(); });
+    resolve();
+  })();
 
   /* ---------- 全屏样式切换 ---------- */
   (function(){
@@ -480,7 +571,7 @@
     var saved='classic';
     try{ saved=localStorage.getItem('unsentStageStyle')||'classic'; }catch(e){}
     function applyStyle(name){
-      stageEl.classList.remove('style-drift','style-single');
+      stageEl.classList.remove('style-drift','style-single','style-tide','style-cinema','style-paper');
       if(name!=='classic') stageEl.classList.add('style-'+name);
       var btns=seg.querySelectorAll('button');
       for(var i=0;i<btns.length;i++) btns[i].classList.toggle('on', btns[i].getAttribute('data-style')===name);
