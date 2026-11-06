@@ -411,7 +411,25 @@
         return cand[0];
       });
   }
-  /* 歌词来源优先级：本地 .lrc > LRCLIB 精确匹配 > LRCLIB 搜索 */
+  /* 歌名清洗：去掉（Live）/【】/伴奏等后缀再匹配一次，常能救回对不上的歌 */
+  function cleanTitle(t){
+    return (t||'').replace(/[\(\[【（][^)\]】）]*[\)\]】）]/g,'').replace(/\s*[-—]\s*(live|伴奏|纯音乐|instrumental).*$/i,'').trim();
+  }
+  /* 最后备用歌词源：lyrics.ovh（无时间轴纯文本，按时长均分出行时间粗对齐滚动） */
+  function ovhLyrics(artist,title,dur){
+    if(!artist) return Promise.resolve(null);
+    return fetch('https://api.lyrics.ovh/v1/'+encodeURIComponent(artist)+'/'+encodeURIComponent(title))
+      .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(d){
+        var txt=(d && d.lyrics)||'';
+        var ls=txt.split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+        if(ls.length<4) return null;
+        var total=dur || ls.length*4.5;
+        return ls.map(function(s,i){ return {t: total*i/ls.length, text:s}; });
+      })
+      .catch(function(){ return null; });
+  }
+  /* 歌词来源优先级：本地 .lrc > LRCLIB 精确 > LRCLIB 搜索 > LRCLIB 清洗歌名重试 > lyrics.ovh */
   function loadLyrics(idx){
     var st=lyrState[idx];
     if(st.status==='loading'||st.status==='done') return;
@@ -425,6 +443,16 @@
         .catch(function(){ return lrclibSearch(meta.artist, meta.title, dur).then(function(rec){ return rec ? parseLrc(rec.syncedLyrics) : null; }); })
         .catch(function(){ return null; })
     );
+    var cleaned=cleanTitle(meta.title);
+    if(cleaned && cleaned!==meta.title){
+      jobs.push(
+        lrclibGet(meta.artist, cleaned, dur)
+          .then(function(rec){ return rec && rec.syncedLyrics ? parseLrc(rec.syncedLyrics) : null; })
+          .catch(function(){ return lrclibSearch(meta.artist, cleaned, dur).then(function(rec){ return rec ? parseLrc(rec.syncedLyrics) : null; }); })
+          .catch(function(){ return null; })
+      );
+    }
+    jobs.push(ovhLyrics(meta.artist, meta.title, dur));
     (function next(j){
       if(j>=jobs.length){ st.status='done'; st.lines=[]; renderLyrics(); return; }
       jobs[j].then(function(lines){
@@ -512,14 +540,83 @@
     if(cov){ bg.style.backgroundImage='url("'+cov+'")'; bg.style.opacity='1'; }
     else { bg.style.opacity='0'; }
   }
+  /* 备用封面源：MusicBrainz 找唱片 + Cover Art Archive 取图（同样用时长把关，防翻唱误配） */
+  function mbCover(meta, dur){
+    var q='recording:"'+(meta.title||'').replace(/"/g,'')+'"'+(meta.artist?' AND artistname:"'+meta.artist.replace(/"/g,'')+'"':'');
+    var url='https://musicbrainz.org/ws/2/recording/?query='+encodeURIComponent(q)+'&fmt=json&limit=10';
+    return fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(data){
+        var recs=(data.recordings||[]).filter(function(x){ return x.releases && x.releases.length; });
+        if(!recs.length) return null;
+        if(dur){
+          recs=recs.filter(function(x){ return x.length && Math.abs(x.length/1000-dur)<=5; });
+        }else{
+          recs=recs.filter(function(x){
+            var ac=(x['artist-credit'] && x['artist-credit'][0] && x['artist-credit'][0].name)||'';
+            return norm(x.title)===norm(meta.title) && (!meta.artist || norm(ac)===norm(meta.artist));
+          });
+        }
+        if(!recs.length) return null;
+        recs.sort(function(a,b){
+          var da=dur ? Math.abs((a.length||0)/1000-dur) : 0, db=dur ? Math.abs((b.length||0)/1000-dur) : 0;
+          return da-db || (b.score||0)-(a.score||0);
+        });
+        var ids=[];
+        recs.slice(0,3).forEach(function(x){ var id=x.releases[0] && x.releases[0].id; if(id && ids.indexOf(id)<0) ids.push(id); });
+        return tryCaa(ids, 0);
+      })
+      .catch(function(){ return null; });
+  }
+  function tryCaa(ids, i){
+    if(i>=ids.length) return Promise.resolve(null);
+    var url='https://coverartarchive.org/release/'+ids[i]+'/front-500';
+    return new Promise(function(res){
+      var im=new Image();
+      im.onload=function(){ res(url); };
+      im.onerror=function(){ res(tryCaa(ids, i+1)); };
+      im.src=url;
+    });
+  }
+  /* 所有源都找不到时，按歌名生成一张莫兰迪占位封面，保证每首歌都有封面（真封面后到会自动替换） */
+  function genCover(meta){
+    try{
+      var seed=0, s=(meta.artist||'')+(meta.title||'');
+      for(var i=0;i<s.length;i++) seed=(seed*31 + s.charCodeAt(i))>>>0;
+      var h=seed%360, h2=(h+36)%360;
+      var cv=document.createElement('canvas'); cv.width=cv.height=600;
+      var cx=cv.getContext('2d');
+      var gr=cx.createLinearGradient(0,0,0,600);
+      gr.addColorStop(0,'hsl('+h+',20%,74%)'); gr.addColorStop(1,'hsl('+h2+',17%,52%)');
+      cx.fillStyle=gr; cx.fillRect(0,0,600,600);
+      cx.fillStyle='rgba(255,255,255,.16)'; cx.beginPath(); cx.arc(452,128,150,0,7); cx.fill();
+      cx.fillStyle='rgba(255,255,255,.92)'; cx.textAlign='center';
+      var main=(meta.title||'♪').slice(0,2);
+      cx.font='300 '+(main.length>1 ? 190 : 250)+'px "LXGW WenKai","Noto Serif SC","Songti SC",serif';
+      cx.fillText(main, 300, 356);
+      cx.fillRect(252,408,96,2);
+      cx.font='30px "Noto Serif SC","Songti SC",serif'; cx.fillStyle='rgba(255,255,255,.85)';
+      cx.fillText(meta.artist||'', 300, 472);
+      cx.font='20px sans-serif'; cx.fillStyle='rgba(255,255,255,.55)';
+      cx.fillText('雾 中 来 信', 300, 540);
+      return cv.toDataURL('image/jpeg', .88);
+    }catch(e){ return ''; }
+  }
+  /* 封面来源优先级：本地同名图（建单时已处理） > iTunes > MusicBrainz/CoverArtArchive > 生成占位 */
   function loadCover(idx, withDur){
     var st=coverState[idx];
     if(!st || st.done) return;
     if(withDur ? st.triedDur : st.triedNoDur) return;
     if(withDur) st.triedDur=true; else st.triedNoDur=true;
-    itunesCover(songMeta[idx], withDur ? durations[idx] : null)
-      .then(function(url){ if(url){ st.done=true; applyCover(idx, url); } })
-      .catch(function(){});
+    var meta=songMeta[idx], dur=withDur ? durations[idx] : null;
+    itunesCover(meta, dur)
+      .then(function(url){ return url || mbCover(meta, dur); })
+      .then(function(url){
+        if(url){ st.done=true; st.phCover=false; applyCover(idx, url); return; }
+        if(!st.phCover){ var g=genCover(meta); if(g){ st.phCover=true; applyCover(idx, g); } }
+      })
+      .catch(function(){
+        if(!st.done && !st.phCover){ var g=genCover(meta); if(g){ st.phCover=true; applyCover(idx, g); } }
+      });
   }
 
   var songMeta=[], songSources=[], lyrState=[], durations={}, coverState=[];
