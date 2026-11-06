@@ -75,7 +75,8 @@
 <script src="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"></script>
 <script>
 (function(){
-  var OWNER='by0628', REPO='music', DIR='songs';
+  var OWNER='by0628', REPO='Music', DIR='songs';
+  var CDN='https://cdn.jsdelivr.net/gh/'+OWNER+'/'+REPO+'@main/'+DIR+'/';
   var AUDIO=['mp3','m4a','wav','ogg','oga','flac','aac','opus'];
   var IMG=['jpg','jpeg','png','webp'];
   var statusEl=document.getElementById('status');
@@ -90,14 +91,16 @@
       var covers={}, lrcs={};
       files.forEach(function(f){
         var e=ext(f.name);
-        if(IMG.indexOf(e)>=0) covers[base(f.name)]=DIR+'/'+encodeURIComponent(f.name);
-        if(e==='lrc') lrcs[base(f.name)]=DIR+'/'+encodeURIComponent(f.name);
+        if(IMG.indexOf(e)>=0) covers[base(f.name)]=CDN+encodeURIComponent(f.name);
+        if(e==='lrc') lrcs[base(f.name)]=CDN+encodeURIComponent(f.name);
       });
+      var fallbacks=[];
       var songs=files.filter(function(f){return AUDIO.indexOf(ext(f.name))>=0;})
         .sort(function(a,b){return a.name.localeCompare(b.name,'zh');})
         .map(function(f){
           var b=base(f.name);
-          var s={name:b, artist:'by0628', url:DIR+'/'+encodeURIComponent(f.name)};
+          var s={name:b, artist:'by0628', url:CDN+encodeURIComponent(f.name)};
+          fallbacks.push(DIR+'/'+encodeURIComponent(f.name));
           if(covers[b]) s.cover=covers[b];
           if(lrcs[b]) s.lrc=lrcs[b];
           return s;
@@ -107,10 +110,21 @@
         return;
       }
       statusEl.textContent='共 '+songs.length+' 首 · 点开任意一首开始';
-      new APlayer({
+      var ap=new APlayer({
         container:document.getElementById('player'),
         audio:songs, theme:'#8fa8d8', lrcType:3,
         listFolded:false, preload:'metadata', volume:0.85, mutex:true
+      });
+      /* CDN 线路失败时自动切回 Pages 直链 */
+      var tried={};
+      ap.audio.addEventListener('error', function(){
+        var i=ap.list.index;
+        if(tried[i] || !fallbacks[i]) return;
+        tried[i]=1;
+        var resume=!ap.audio.paused;
+        ap.list.audios[i].url=fallbacks[i];
+        ap.audio.src=fallbacks[i];
+        if(resume) ap.play();
       });
     })
     .catch(function(){
