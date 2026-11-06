@@ -110,7 +110,8 @@
   /* ---------- beautify pack ---------- */
   :root{ --accent-l:#c7d5f2; }
   .moon{transition:transform .3s ease-out}
-  #lrcScroll p.cur{color:var(--accent-l)}
+  #lrcScroll p.cur{color:var(--accent-l);text-shadow:0 0 18px var(--accent)}
+  #stageScroll p.cur{color:var(--accent-l)}
   /* rotating vinyl */
   .aplayer .aplayer-pic{border-radius:50%!important;overflow:hidden}
   .aplayer .aplayer-pic .pic-rot{position:absolute;inset:0;border-radius:50%;background-size:cover;background-position:center;z-index:0}
@@ -334,7 +335,7 @@
         r=Math.round(r*0.72+24); g=Math.round(g*0.72+30); b=Math.round(b*0.72+52);
         var root=document.documentElement.style;
         root.setProperty('--accent','rgb('+r+','+g+','+b+')');
-        var lr=Math.round(r+(255-r)*0.55), lg=Math.round(g+(255-g)*0.55), lb=Math.round(b+(255-b)*0.55);
+        var lr=Math.round(r+(255-r)*0.36), lg=Math.round(g+(255-g)*0.36), lb=Math.round(b+(255-b)*0.36);
         root.setProperty('--accent-l','rgb('+lr+','+lg+','+lb+')');
       }catch(e){ /* 取色失败就保留默认夜蓝 */ }
     };
