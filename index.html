@@ -84,9 +84,26 @@
   function ext(name){ var m=name.toLowerCase().match(/\.([a-z0-9]+)$/); return m?m[1]:''; }
   function base(name){ return name.replace(/\.[^.]+$/,''); }
 
-  fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+'/contents/'+DIR, {headers:{'Accept':'application/vnd.github+json'}})
-    .then(function(r){ if(!r.ok) throw new Error('list '+r.status); return r.json(); })
-    .then(function(items){
+  var API='https://api.github.com/repos/'+OWNER+'/'+REPO;
+  function gh(url){ return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}); }
+  /* 每首歌准备多条线路，一条不通自动换下一条 */
+  function sourcesFor(enc, sha){
+    var list=[];
+    if(sha) list.push('https://cdn.jsdelivr.net/gh/'+OWNER+'/'+REPO+'@'+sha+'/'+DIR+'/'+enc);
+    list.push('https://cdn.jsdelivr.net/gh/'+OWNER+'/'+REPO+'@main/'+DIR+'/'+enc);
+    list.push('https://cdn.statically.io/gh/'+OWNER+'/'+REPO+'/main/'+DIR+'/'+enc);
+    list.push('https://raw.githubusercontent.com/'+OWNER+'/'+REPO+'/main/'+DIR+'/'+enc);
+    list.push(DIR+'/'+enc);
+    return list;
+  }
+
+  Promise.all([
+    gh(API+'/contents/'+DIR).then(function(r){ if(!r.ok) throw new Error('list '+r.status); return r.json(); }),
+    gh(API+'/branches/main').then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; })
+  ])
+    .then(function(res){
+      var items=res[0];
+      var sha=res[1] && res[1].commit && res[1].commit.sha;
       var files=(items||[]).filter(function(i){return i.type==='file';});
       var covers={}, lrcs={};
       files.forEach(function(f){
@@ -94,13 +111,14 @@
         if(IMG.indexOf(e)>=0) covers[base(f.name)]=CDN+encodeURIComponent(f.name);
         if(e==='lrc') lrcs[base(f.name)]=CDN+encodeURIComponent(f.name);
       });
-      var fallbacks=[];
+      var songSources=[];
       var songs=files.filter(function(f){return AUDIO.indexOf(ext(f.name))>=0;})
         .sort(function(a,b){return a.name.localeCompare(b.name,'zh');})
         .map(function(f){
           var b=base(f.name);
-          var s={name:b, artist:'by0628', url:CDN+encodeURIComponent(f.name)};
-          fallbacks.push(DIR+'/'+encodeURIComponent(f.name));
+          var srcs=sourcesFor(encodeURIComponent(f.name), sha);
+          songSources.push(srcs);
+          var s={name:b, artist:'by0628', url:srcs[0]};
           if(covers[b]) s.cover=covers[b];
           if(lrcs[b]) s.lrc=lrcs[b];
           return s;
@@ -115,15 +133,17 @@
         audio:songs, theme:'#8fa8d8', lrcType:3,
         listFolded:false, preload:'metadata', volume:0.85, mutex:true
       });
-      /* CDN 线路失败时自动切回 Pages 直链 */
-      var tried={};
+      /* 当前线路报错就自动顺延到下一条，直到能播为止 */
+      var attempts={};
       ap.audio.addEventListener('error', function(){
-        var i=ap.list.index;
-        if(tried[i] || !fallbacks[i]) return;
-        tried[i]=1;
+        var i=ap.list.index, srcs=songSources[i];
+        if(!srcs) return;
+        var next=(attempts[i]||0)+1;
+        if(next>=srcs.length) return;
+        attempts[i]=next;
         var resume=!ap.audio.paused;
-        ap.list.audios[i].url=fallbacks[i];
-        ap.audio.src=fallbacks[i];
+        ap.list.audios[i].url=srcs[next];
+        ap.audio.src=srcs[next];
         if(resume) ap.play();
       });
     })
