@@ -404,9 +404,23 @@
       .then(function(list){
         var cand=(list||[]).filter(function(x){ return x.syncedLyrics && !x.instrumental; });
         if(!cand.length) return null;
+        /* 本地打分匹配：标题/歌手吻合度在浏览器本地算分，再结合时长差挑最像的一条 */
+        function score(x){
+          var s=0;
+          if(norm(x.trackName||'')===norm(title)) s+=4;
+          if(artist && norm(artist) && norm(x.artistName||'')===norm(artist)) s+=3;
+          else if(artist && norm(artist) && norm(x.artistName||'').indexOf(norm(artist))>=0) s+=1;
+          return s;
+        }
         if(dur){
-          cand.sort(function(a,b){ return Math.abs((a.duration||0)-dur)-Math.abs((b.duration||0)-dur); });
+          cand.sort(function(a,b){
+            var dd=Math.abs((a.duration||0)-dur)-Math.abs((b.duration||0)-dur);
+            return dd!==0 ? dd : score(b)-score(a);
+          });
           if(Math.abs((cand[0].duration||0)-dur)>6) return null;
+        }else{
+          cand.sort(function(a,b){ return score(b)-score(a); });
+          if(score(cand[0])<4) return null;
         }
         return cand[0];
       });
@@ -430,6 +444,18 @@
       .catch(function(){ return null; });
   }
   /* 歌词来源优先级：本地 .lrc > LRCLIB 精确 > LRCLIB 搜索 > LRCLIB 清洗歌名重试 > lyrics.ovh */
+  /* 歌词本地缓存：匹配成功就存浏览器 localStorage，下次进站直接命中、不用再联网等 */
+  function lrcCacheGet(meta){
+    try{
+      var v=localStorage.getItem('unsentLrcV1:'+(meta.artist||'')+'|'+meta.title);
+      if(!v) return null;
+      var lines=JSON.parse(v);
+      return (lines && lines.length) ? lines : null;
+    }catch(e){ return null; }
+  }
+  function lrcCacheSet(meta, lines){
+    try{ localStorage.setItem('unsentLrcV1:'+(meta.artist||'')+'|'+meta.title, JSON.stringify(lines)); }catch(e){}
+  }
   function loadLyrics(idx){
     var st=lyrState[idx];
     if(st.status==='loading'||st.status==='done') return;
@@ -437,6 +463,7 @@
     var meta=songMeta[idx], dur=durations[idx];
     var jobs=[];
     if(meta.lrcFile) jobs.push(fetchText(sourcesFor(encodeURIComponent(meta.lrcFile), mainSha)).then(parseLrc));
+    jobs.push(Promise.resolve(lrcCacheGet(meta)));
     jobs.push(
       lrclibGet(meta.artist, meta.title, dur)
         .then(function(rec){ return rec && rec.syncedLyrics ? parseLrc(rec.syncedLyrics) : null; })
@@ -456,7 +483,11 @@
     (function next(j){
       if(j>=jobs.length){ st.status='done'; st.lines=[]; renderLyrics(); return; }
       jobs[j].then(function(lines){
-        if(lines && lines.length){ st.status='done'; st.lines=lines; renderLyrics(); }
+        if(lines && lines.length){
+          st.status='done'; st.lines=lines;
+          if(j<jobs.length-1) lrcCacheSet(meta, lines); /* ovh 粗对齐结果不进缓存，留机会给更准的源 */
+          renderLyrics();
+        }
         else next(j+1);
       }).catch(function(){ next(j+1); });
     })(0);
@@ -608,10 +639,17 @@
     if(withDur ? st.triedDur : st.triedNoDur) return;
     if(withDur) st.triedDur=true; else st.triedNoDur=true;
     var meta=songMeta[idx], dur=withDur ? durations[idx] : null;
+    var covCached=null;
+    try{ covCached=localStorage.getItem('unsentCovV1:'+(meta.artist||'')+'|'+meta.title); }catch(e){}
+    if(covCached){ st.done=true; applyCover(idx, covCached); return; }
     itunesCover(meta, dur)
       .then(function(url){ return url || mbCover(meta, dur); })
       .then(function(url){
-        if(url){ st.done=true; st.phCover=false; applyCover(idx, url); return; }
+        if(url){
+          st.done=true; st.phCover=false;
+          try{ localStorage.setItem('unsentCovV1:'+(meta.artist||'')+'|'+meta.title, url); }catch(e){}
+          applyCover(idx, url); return;
+        }
         if(!st.phCover){ var g=genCover(meta); if(g){ st.phCover=true; applyCover(idx, g); } }
       })
       .catch(function(){
@@ -749,6 +787,32 @@
     markGroupCurrent();
   }
   window.buildGroups=buildGroups;
+
+  /* ---------- 进站预加载：把所有歌的时长/封面/歌词在后台错峰拉好，切歌秒开 ---------- */
+  function preloadOne(i){
+    if(durations[i]){ loadCover(i, true); loadLyrics(i); return; }
+    var a=new Audio(); a.preload='metadata';
+    var done=false;
+    function fin(){
+      if(done) return; done=true;
+      if(a.duration && isFinite(a.duration)){
+        durations[i]=a.duration;
+        var drow=groupsEl ? groupsEl.querySelector('.grp-row[data-gi="'+i+'"] .dur') : null;
+        if(drow) drow.textContent=fmtDur(a.duration);
+      }
+      loadCover(i, true); loadLyrics(i);
+      try{ a.removeAttribute('src'); a.load(); }catch(e){}
+    }
+    a.addEventListener('loadedmetadata', fin);
+    a.addEventListener('error', fin);
+    setTimeout(fin, 7000);
+    a.src=songSources[i][0];
+  }
+  function preloadAll(){
+    var order=[curIdx];
+    songMeta.forEach(function(_, i){ if(i!==curIdx) order.push(i); });
+    order.forEach(function(i, n){ setTimeout(function(){ preloadOne(i); }, n*450); });
+  }
 
   function resetTint(){ curTint=null; applyVars(); }
 
@@ -1111,6 +1175,7 @@
         applyStageBg();
       });
       buildGroups();
+      preloadAll();
       stageTitle.textContent=T((songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title);
       stageBtn.style.display='block';
       loadCover(0, false);
