@@ -74,6 +74,9 @@
     background:radial-gradient(1000px 620px at 50% 30%, rgba(38,54,96,.55), rgba(7,10,20,.94) 70%);
     backdrop-filter:blur(8px)}
   #stage.open{display:flex}
+  #stageBg{position:absolute;inset:-40px;z-index:0;background-size:cover;background-position:center;
+    filter:blur(46px) brightness(.42) saturate(.85);opacity:0;transition:opacity 1.2s}
+  #stageHead,#stageBody,#stageBar{position:relative;z-index:1}
   #stageHead{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;color:var(--ink-faint)}
   #stageTitle{font-size:13px;letter-spacing:.3em}
   #stageClose{background:transparent;border:1px solid var(--line);color:var(--ink-dim);border-radius:999px;
@@ -113,6 +116,7 @@
 <footer>写给每一个还没睡的人</footer>
 
 <div id="stage">
+  <div id="stageBg"></div>
   <div id="stageHead">
     <div id="stageTitle"></div>
     <button id="stageClose" title="关闭">✕</button>
@@ -221,7 +225,54 @@
     })(0);
   }
 
-  var songMeta=[], songSources=[], lyrState=[], durations={};
+  /* ---------------- auto cover (iTunes) ---------------- */
+  function norm(s){ return (s||'').toLowerCase().replace(/[\s\u3000·・'"'"'“”‘’()（）\[\]【】\-—_,，.。!！?？:：;；/\\]/g,''); }
+  function itunesCover(meta, dur){
+    var term=(meta.artist?meta.artist+' ':'')+meta.title;
+    var url='https://itunes.apple.com/search?term='+encodeURIComponent(term)+'&media=music&entity=song&limit=8';
+    return fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(data){
+        var res=(data.results||[]).filter(function(x){ return x.artworkUrl100; });
+        if(!res.length) return null;
+        var pick=null;
+        if(dur){
+          var inWin=res.filter(function(x){ return Math.abs((x.trackTimeMillis||0)/1000-dur)<=4; });
+          if(!inWin.length) return null;
+          pick=inWin.filter(function(x){ return norm(x.trackName)===norm(meta.title); })[0]
+            || inWin.filter(function(x){ return norm(x.artistName)===norm(meta.artist); })[0]
+            || inWin[0];
+        }else{
+          pick=res.filter(function(x){ return norm(x.trackName)===norm(meta.title) && norm(x.artistName)===norm(meta.artist); })[0]||null;
+        }
+        return pick ? pick.artworkUrl100.replace('100x100bb.jpg','600x600bb.jpg') : null;
+      });
+  }
+  function applyCover(idx, url){
+    songMeta[idx].cover=url;
+    if(ap && ap.list.audios[idx]) ap.list.audios[idx].cover=url;
+    if(ap && idx===curIdx){
+      var pic=document.querySelector('.aplayer-pic');
+      if(pic) pic.style.backgroundImage='url("'+url+'")';
+      applyStageBg();
+    }
+  }
+  function applyStageBg(){
+    var bg=document.getElementById('stageBg');
+    var cov=songMeta[curIdx] && songMeta[curIdx].cover;
+    if(cov){ bg.style.backgroundImage='url("'+cov+'")'; bg.style.opacity='1'; }
+    else { bg.style.opacity='0'; }
+  }
+  function loadCover(idx, withDur){
+    var st=coverState[idx];
+    if(!st || st.done) return;
+    if(withDur ? st.triedDur : st.triedNoDur) return;
+    if(withDur) st.triedDur=true; else st.triedNoDur=true;
+    itunesCover(songMeta[idx], withDur ? durations[idx] : null)
+      .then(function(url){ if(url){ st.done=true; applyCover(idx, url); } })
+      .catch(function(){});
+  }
+
+  var songMeta=[], songSources=[], lyrState=[], durations={}, coverState=[];
   var ap=null, curIdx=0, curLine=-1;
 
   var lrcPanel=document.getElementById('lrcPanel'), lrcScroll=document.getElementById('lrcScroll'),
@@ -314,8 +365,9 @@
           var b=base(f.name), nm=splitName(b);
           var srcs=sourcesFor(encodeURIComponent(f.name), mainSha);
           songSources.push(srcs);
-          songMeta.push({artist:nm.artist, title:nm.title, file:b, lrcFile:lrcFiles[b]||null});
+          songMeta.push({artist:nm.artist, title:nm.title, file:b, lrcFile:lrcFiles[b]||null, cover:covers[b]||null});
           lyrState.push({status:'idle', lines:null});
+          coverState.push({done:!!covers[b], triedNoDur:false, triedDur:false});
           var s={name:nm.title, artist:nm.artist||'by0628', url:srcs[0]};
           if(covers[b]) s.cover=covers[b];
           return s;
@@ -346,15 +398,20 @@
       ap.audio.addEventListener('loadedmetadata', function(){
         durations[ap.list.index]=ap.audio.duration;
         loadLyrics(ap.list.index);
+        loadCover(ap.list.index, true);
       });
       ap.on('listswitch', function(e){
         curIdx=e.index; curLine=-1;
         stageTitle.textContent=songMeta[curIdx] ? (songMeta[curIdx].artist ? songMeta[curIdx].artist+' - ' : '')+songMeta[curIdx].title : '';
         renderLyrics();
         loadLyrics(curIdx);
+        loadCover(curIdx, false);
+        applyStageBg();
       });
       stageTitle.textContent=(songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title;
       stageBtn.style.display='block';
+      loadCover(0, false);
+      applyStageBg();
       /* 等元数据给出时长再匹配歌词更准；3.5 秒还没等到就先直接查 */
       setTimeout(function(){ loadLyrics(ap.list.index); }, 3500);
     })
