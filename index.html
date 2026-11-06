@@ -394,13 +394,23 @@
     });
     return chain;
   }
+  /* 带超时的 fetch：国外源（走其官方 CDN 域名直连）不通时 7 秒熔断，不拖住整条链 */
+  function fetchT(url, ms){
+    ms=ms||7000;
+    if(window.AbortController){
+      var ctl=new AbortController();
+      var t=setTimeout(function(){ try{ ctl.abort(); }catch(e){} }, ms);
+      return fetch(url, {signal: ctl.signal}).then(function(r){ clearTimeout(t); return r; }, function(e){ clearTimeout(t); throw e; });
+    }
+    return fetch(url);
+  }
   function lrclibGet(artist,title,dur){
     var q='track_name='+encodeURIComponent(title)+(artist?'&artist_name='+encodeURIComponent(artist):'')+(dur?'&duration='+Math.round(dur):'');
-    return fetch('https://lrclib.net/api/get?'+q).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); });
+    return fetchT('https://lrclib.net/api/get?'+q).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); });
   }
   function lrclibSearch(artist,title,dur){
     var q='track_name='+encodeURIComponent(title)+(artist?'&artist_name='+encodeURIComponent(artist):'');
-    return fetch('https://lrclib.net/api/search?'+q).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    return fetchT('https://lrclib.net/api/search?'+q).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(list){
         var cand=(list||[]).filter(function(x){ return x.syncedLyrics && !x.instrumental; });
         if(!cand.length) return null;
@@ -498,7 +508,7 @@
   function itunesCover(meta, dur){
     var term=(meta.artist?meta.artist+' ':'')+meta.title;
     var url='https://itunes.apple.com/search?term='+encodeURIComponent(term)+'&media=music&entity=song&limit=8';
-    return fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    return fetchT(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(data){
         var res=(data.results||[]).filter(function(x){ return x.artworkUrl100; });
         if(!res.length) return null;
@@ -615,7 +625,7 @@
   function mbCover(meta, dur){
     var q='recording:"'+(meta.title||'').replace(/"/g,'')+'"'+(meta.artist?' AND artistname:"'+meta.artist.replace(/"/g,'')+'"':'');
     var url='https://musicbrainz.org/ws/2/recording/?query='+encodeURIComponent(q)+'&fmt=json&limit=10';
-    return fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    return fetchT(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(data){
         var recs=(data.recordings||[]).filter(function(x){ return x.releases && x.releases.length; });
         if(!recs.length) return null;
@@ -659,31 +669,7 @@
       im.src=url;
     });
   }
-  /* 所有源都找不到时，按歌名生成一张莫兰迪占位封面，保证每首歌都有封面（真封面后到会自动替换） */
-  function genCover(meta){
-    try{
-      var seed=0, s=(meta.artist||'')+(meta.title||'');
-      for(var i=0;i<s.length;i++) seed=(seed*31 + s.charCodeAt(i))>>>0;
-      var h=seed%360, h2=(h+36)%360;
-      var cv=document.createElement('canvas'); cv.width=cv.height=600;
-      var cx=cv.getContext('2d');
-      var gr=cx.createLinearGradient(0,0,0,600);
-      gr.addColorStop(0,'hsl('+h+',20%,74%)'); gr.addColorStop(1,'hsl('+h2+',17%,52%)');
-      cx.fillStyle=gr; cx.fillRect(0,0,600,600);
-      cx.fillStyle='rgba(255,255,255,.16)'; cx.beginPath(); cx.arc(452,128,150,0,7); cx.fill();
-      cx.fillStyle='rgba(255,255,255,.92)'; cx.textAlign='center';
-      var main=(meta.title||'♪').slice(0,2);
-      cx.font='300 '+(main.length>1 ? 190 : 250)+'px "LXGW WenKai","Noto Serif SC","Songti SC",serif';
-      cx.fillText(main, 300, 356);
-      cx.fillRect(252,408,96,2);
-      cx.font='30px "Noto Serif SC","Songti SC",serif'; cx.fillStyle='rgba(255,255,255,.85)';
-      cx.fillText(meta.artist||'', 300, 472);
-      cx.font='20px sans-serif'; cx.fillStyle='rgba(255,255,255,.55)';
-      cx.fillText('雾 中 来 信', 300, 540);
-      return cv.toDataURL('image/jpeg', .88);
-    }catch(e){ return ''; }
-  }
-  /* 封面来源优先级：本地同名图（建单时已处理） > QQ音乐 > iTunes > MusicBrainz/CoverArtArchive > 生成占位 */
+  /* 封面来源优先级：本地同名图（建单时已处理） > QQ音乐 > iTunes > MusicBrainz/CoverArtArchive；全落空不生成本地图，保持纯黑并靠切歌重试 */
   function loadCover(idx, withDur){
     var st=coverState[idx];
     if(!st || st.done) return;
@@ -698,15 +684,13 @@
       .then(function(url){ return url || mbCover(meta, dur); })
       .then(function(url){
         if(url){
-          st.done=true; st.phCover=false;
+          st.done=true;
           try{ localStorage.setItem('unsentCovV1:'+(meta.artist||'')+'|'+meta.title, url); }catch(e){}
-          applyCover(idx, url); return;
+          applyCover(idx, url);
         }
-        if(!st.phCover){ var g=genCover(meta); if(g){ st.phCover=true; applyCover(idx, g); } }
+        /* 全源落空：不造本地图，封面保持纯黑，下次切到这首会自动重查 */
       })
-      .catch(function(){
-        if(!st.done && !st.phCover){ var g=genCover(meta); if(g){ st.phCover=true; applyCover(idx, g); } }
-      });
+      .catch(function(){});
   }
 
   var songMeta=[], songSources=[], lyrState=[], durations={}, coverState=[];
@@ -1221,8 +1205,8 @@
         if(window.refreshLangDOM) window.refreshLangDOM();
         renderLyrics();
         loadLyrics(curIdx);
-        if(coverState[curIdx] && coverState[curIdx].phCover && !coverState[curIdx].done){
-          /* 现在显示的是本地生成封面：切到这首时再给线上源一次机会，线上确实没有才继续用本地的 */
+        if(coverState[curIdx] && !coverState[curIdx].done && !(songMeta[curIdx] && songMeta[curIdx].cover)){
+          /* 还没有真封面：每次切到这首都重查一次线上源，不让任何一次网络失败定终身 */
           coverState[curIdx].triedDur=false;
           loadCover(curIdx, true);
         }else{
