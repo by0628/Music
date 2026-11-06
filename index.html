@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>未寄出的歌 · by0628</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css">
+<style>
+  :root{
+    --ink:#c9d4e8; --ink-dim:#7d8aa5; --ink-faint:#4b5872;
+    --bg:#0a0e1a; --bg2:#0d1322; --line:rgba(160,180,220,.14);
+    --accent:#8fa8d8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    background:radial-gradient(1200px 700px at 50% -10%, #16203c 0%, var(--bg2) 45%, var(--bg) 100%);
+    color:var(--ink);
+    font-family:"Songti SC","STSong","Noto Serif SC","SimSun",serif;
+    overflow-x:hidden;
+  }
+  #rain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5}
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");}
+  .moon{position:fixed;top:9vh;right:11vw;width:74px;height:74px;border-radius:50%;z-index:0;
+    background:radial-gradient(circle at 38% 35%, #fdf6dd, #e8dfae 55%, #cfc48d);
+    box-shadow:0 0 60px 18px rgba(240,230,180,.16), 0 0 140px 60px rgba(240,230,180,.06);opacity:.85}
+  main{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:15vh 24px 90px}
+  .kicker{letter-spacing:.55em;font-size:11px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:22px}
+  h1{font-size:clamp(38px,8vw,58px);font-weight:400;letter-spacing:.14em;line-height:1.25;
+     background:linear-gradient(180deg,#eef2fb,#9db1d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{margin-top:18px;color:var(--ink-dim);font-size:15px;letter-spacing:.22em;line-height:2}
+  .rule{width:56px;height:1px;background:var(--line);margin:44px 0 10px}
+  #status{color:var(--ink-faint);font-size:13px;letter-spacing:.18em;padding:18px 2px}
+  /* APlayer melancholy theme */
+  .aplayer{background:rgba(13,19,34,.72)!important;backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.5);
+    font-family:inherit!important;color:var(--ink)!important}
+  .aplayer .aplayer-list{border-top:1px solid var(--line)!important}
+  .aplayer .aplayer-list ol li{border-top:1px solid rgba(160,180,220,.07)!important;color:var(--ink-dim)!important;letter-spacing:.06em}
+  .aplayer .aplayer-list ol li:hover{background:rgba(143,168,216,.08)!important}
+  .aplayer .aplayer-list ol li.aplayer-list-light{background:rgba(143,168,216,.13)!important;color:var(--ink)!important}
+  .aplayer .aplayer-list ol li .aplayer-list-author{color:var(--ink-faint)!important}
+  .aplayer .aplayer-info{border-bottom:none!important}
+  .aplayer .aplayer-info .aplayer-music .aplayer-title{color:var(--ink)!important;font-size:16px!important;letter-spacing:.08em}
+  .aplayer .aplayer-info .aplayer-music .aplayer-author{color:var(--ink-faint)!important}
+  .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar{background:rgba(160,180,220,.18)!important}
+  .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar .aplayer-loaded{background:rgba(160,180,220,.28)!important}
+  .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar .aplayer-played{background:var(--accent)!important}
+  .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar .aplayer-played .aplayer-thumb{background:var(--accent)!important;border-color:var(--accent)!important}
+  .aplayer .aplayer-info .aplayer-controller .aplayer-time{color:var(--ink-faint)!important}
+  .aplayer .aplayer-info .aplayer-controller .aplayer-time .aplayer-icon path{fill:var(--ink-dim)!important}
+  .aplayer .aplayer-pic .aplayer-play,.aplayer .aplayer-pic .aplayer-pause{background:rgba(20,28,48,.75)!important;border-color:rgba(200,215,245,.5)!important}
+  .aplayer .aplayer-lrc{text-shadow:none!important}
+  .aplayer .aplayer-lrc p{color:var(--ink-faint)!important}
+  .aplayer .aplayer-lrc p.aplayer-lrc-current{color:var(--ink)!important}
+  .aplayer .aplayer-notice{background:rgba(20,28,48,.95)!important;color:var(--ink)!important}
+  footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
+</style>
+</head>
+<body>
+<canvas id="rain"></canvas>
+<div class="grain"></div>
+<div class="moon"></div>
+<main>
+  <div class="kicker">by0628 · songs</div>
+  <h1>未寄出的歌</h1>
+  <p class="sub">一些在深夜里写下的歌。<br>不赶时间，慢慢听。</p>
+  <div class="rule"></div>
+  <div id="status">正在翻开歌单……</div>
+  <div id="player"></div>
+</main>
+<footer>写给每一个还没睡的人</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"></script>
+<script>
+(function(){
+  var OWNER='by0628', REPO='music', DIR='songs';
+  var AUDIO=['mp3','m4a','wav','ogg','oga','flac','aac','opus'];
+  var IMG=['jpg','jpeg','png','webp'];
+  var statusEl=document.getElementById('status');
+
+  function ext(name){ var m=name.toLowerCase().match(/\.([a-z0-9]+)$/); return m?m[1]:''; }
+  function base(name){ return name.replace(/\.[^.]+$/,''); }
+
+  fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+'/contents/'+DIR, {headers:{'Accept':'application/vnd.github+json'}})
+    .then(function(r){ if(!r.ok) throw new Error('list '+r.status); return r.json(); })
+    .then(function(items){
+      var files=(items||[]).filter(function(i){return i.type==='file';});
+      var covers={}, lrcs={};
+      files.forEach(function(f){
+        var e=ext(f.name);
+        if(IMG.indexOf(e)>=0) covers[base(f.name)]=DIR+'/'+encodeURIComponent(f.name);
+        if(e==='lrc') lrcs[base(f.name)]=DIR+'/'+encodeURIComponent(f.name);
+      });
+      var songs=files.filter(function(f){return AUDIO.indexOf(ext(f.name))>=0;})
+        .sort(function(a,b){return a.name.localeCompare(b.name,'zh');})
+        .map(function(f){
+          var b=base(f.name);
+          var s={name:b, artist:'by0628', url:DIR+'/'+encodeURIComponent(f.name)};
+          if(covers[b]) s.cover=covers[b];
+          if(lrcs[b]) s.lrc=lrcs[b];
+          return s;
+        });
+      if(!songs.length){
+        statusEl.textContent='歌单还空着——第一首歌，正在来的路上。';
+        return;
+      }
+      statusEl.textContent='共 '+songs.length+' 首 · 点开任意一首开始';
+      new APlayer({
+        container:document.getElementById('player'),
+        audio:songs, theme:'#8fa8d8', lrcType:3,
+        listFolded:false, preload:'metadata', volume:0.85, mutex:true
+      });
+    })
+    .catch(function(){
+      statusEl.textContent='歌单暂时没打开（网络或接口限流），刷新一次试试。';
+    });
+
+  /* gentle rain */
+  var c=document.getElementById('rain'), x=c.getContext('2d'), W, H, drops=[];
+  function resize(){ W=c.width=innerWidth; H=c.height=innerHeight; }
+  resize(); addEventListener('resize', resize);
+  for(var i=0;i<70;i++) drops.push({x:Math.random()*2000, y:Math.random()*1200, l:10+Math.random()*16, s:6+Math.random()*7});
+  (function tick(){
+    x.clearRect(0,0,W,H);
+    x.strokeStyle='rgba(170,195,235,.28)'; x.lineWidth=1; x.beginPath();
+    drops.forEach(function(d){
+      x.moveTo(d.x,d.y); x.lineTo(d.x-1.5,d.y+d.l);
+      d.y+=d.s; d.x-=0.6;
+      if(d.y>H){ d.y=-20; d.x=Math.random()*(W+100); }
+    });
+    x.stroke();
+    requestAnimationFrame(tick);
+  })();
+})();
+</script>
+</body>
+</html>
