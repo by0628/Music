@@ -124,9 +124,12 @@
   body.playing .aplayer .aplayer-pic .pic-rot{animation:spin 16s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   /* breathing dots for instrumental gaps */
-  .dots{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;gap:9px;z-index:3}
+  .dots{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;gap:10px;z-index:5;pointer-events:none}
   .dots.on{display:flex}
-  .dots span{width:7px;height:7px;border-radius:50%;background:var(--accent-l);opacity:.25;animation:breathe 1.7s ease-in-out infinite}
+  .dots span{width:9px;height:9px;border-radius:50%;background:var(--accent-l);opacity:.25;
+    box-shadow:0 0 12px var(--accent);animation:breathe 1.7s ease-in-out infinite}
+  #lrcPanel.gap #lrcScroll{opacity:.3}
+  #lrcScroll{transition:transform .6s cubic-bezier(.22,.8,.3,1),opacity .5s}
   .dots span:nth-child(2){animation-delay:.28s}
   .dots span:nth-child(3){animation-delay:.56s}
   @keyframes breathe{0%,100%{opacity:.18;transform:scale(.8)}50%{opacity:.85;transform:scale(1.25)}}
@@ -426,6 +429,7 @@
     }
     document.getElementById('panelDots').classList.toggle('on', dotsOn);
     document.getElementById('stageDots').classList.toggle('on', dotsOn);
+    lrcPanel.classList.toggle('gap', dotsOn);
     updatePulse();
     if(!st || !st.lines || !st.lines.length) return;
     var lo=0, hi=st.lines.length-1, idx=-1;
