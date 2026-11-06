@@ -453,7 +453,33 @@
       })
       .catch(function(){ return null; });
   }
-  /* 歌词来源优先级：本地 .lrc > LRCLIB 精确 > LRCLIB 搜索 > LRCLIB 清洗歌名重试 > lyrics.ovh */
+  /* 无时间轴的纯文本歌词：按时长均分行时间粗对齐（有总比没有强） */
+  function plainToLines(txt, dur){
+    var ls=(txt||'').split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+    if(ls.length<4) return null;
+    var total=dur || ls.length*4.5;
+    return ls.map(function(s,i){ return {t: total*i/ls.length, text:s}; });
+  }
+  /* LRCLIB 纯文本兜底：有些歌只有 plainLyrics 没有同步轴（例：《唤水剑》），也捞回来用 */
+  function lrclibPlain(artist, title, dur){
+    return lrclibGet(artist, title, dur)
+      .then(function(rec){ return (rec && rec.plainLyrics) ? plainToLines(rec.plainLyrics, dur || rec.duration) : null; })
+      .catch(function(){
+        var q='track_name='+encodeURIComponent(title)+(artist?'&artist_name='+encodeURIComponent(artist):'');
+        return fetchT('https://lrclib.net/api/search?'+q).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+          .then(function(list){
+            var cand=(list||[]).filter(function(x){ return x.plainLyrics && !x.instrumental; });
+            if(!cand.length) return null;
+            if(dur){
+              cand.sort(function(a,b){ return Math.abs((a.duration||0)-dur)-Math.abs((b.duration||0)-dur); });
+              if(Math.abs((cand[0].duration||0)-dur)>6) return null;
+            }
+            return plainToLines(cand[0].plainLyrics, dur || cand[0].duration);
+          });
+      })
+      .catch(function(){ return null; });
+  }
+  /* 歌词来源优先级：本地 .lrc > 本地缓存 > LRCLIB 精确 > LRCLIB 搜索 > LRCLIB 清洗歌名重试 > LRCLIB 纯文本 > lyrics.ovh */
   /* 歌词本地缓存：匹配成功就存浏览器 localStorage，下次进站直接命中、不用再联网等 */
   function lrcCacheGet(meta){
     try{
@@ -489,13 +515,15 @@
           .catch(function(){ return null; })
       );
     }
+    jobs.push(lrclibPlain(meta.artist, meta.title, dur));
     jobs.push(ovhLyrics(meta.artist, meta.title, dur));
+    var approxStart=jobs.length-2; /* 最后两档是粗对齐兜底，命中的不进缓存，留机会给精准同步版 */
     (function next(j){
       if(j>=jobs.length){ st.status='done'; st.lines=[]; renderLyrics(); return; }
       jobs[j].then(function(lines){
         if(lines && lines.length){
           st.status='done'; st.lines=lines;
-          if(j<jobs.length-1) lrcCacheSet(meta, lines); /* ovh 粗对齐结果不进缓存，留机会给更准的源 */
+          if(j<approxStart) lrcCacheSet(meta, lines);
           renderLyrics();
         }
         else next(j+1);
