@@ -51,11 +51,48 @@
   .aplayer .aplayer-info .aplayer-controller .aplayer-time{color:var(--ink-faint)!important}
   .aplayer .aplayer-info .aplayer-controller .aplayer-time .aplayer-icon path{fill:var(--ink-dim)!important}
   .aplayer .aplayer-pic .aplayer-play,.aplayer .aplayer-pic .aplayer-pause{background:rgba(20,28,48,.75)!important;border-color:rgba(200,215,245,.5)!important}
-  .aplayer .aplayer-lrc{text-shadow:none!important}
-  .aplayer .aplayer-lrc p{color:var(--ink-faint)!important}
-  .aplayer .aplayer-lrc p.aplayer-lrc-current{color:var(--ink)!important}
   .aplayer .aplayer-notice{background:rgba(20,28,48,.95)!important;color:var(--ink)!important}
   footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
+
+  /* ---------- lyrics ---------- */
+  #stageBtn{display:none;margin:26px auto 0;padding:10px 26px;background:transparent;color:var(--ink-dim);
+    border:1px solid var(--line);border-radius:999px;font-family:inherit;font-size:13px;letter-spacing:.35em;cursor:pointer;
+    transition:all .3s}
+  #stageBtn:hover{color:var(--ink);border-color:rgba(160,180,220,.45)}
+  #lrcPanel{display:none;margin-top:22px;height:196px;overflow:hidden;position:relative;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent);
+            mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent)}
+  #lrcScroll{position:absolute;left:0;right:0;top:0;transition:transform .6s cubic-bezier(.22,.8,.3,1);padding:84px 6px;text-align:center}
+  #lrcScroll p{font-size:15px;line-height:2.15;color:var(--ink-faint);letter-spacing:.08em;cursor:pointer;
+    transition:color .45s,opacity .45s,transform .45s,filter .45s;white-space:pre-wrap}
+  #lrcScroll p.near{color:var(--ink-dim)}
+  #lrcScroll p.cur{color:#eef2fb;transform:scale(1.06)}
+  #lrcNote{margin-top:22px;text-align:center;color:var(--ink-faint);font-size:12.5px;letter-spacing:.25em;display:none}
+
+  /* ---------- fullscreen lyric stage ---------- */
+  #stage{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;
+    background:radial-gradient(1000px 620px at 50% 30%, rgba(38,54,96,.55), rgba(7,10,20,.94) 70%);
+    backdrop-filter:blur(8px)}
+  #stage.open{display:flex}
+  #stageHead{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;color:var(--ink-faint)}
+  #stageTitle{font-size:13px;letter-spacing:.3em}
+  #stageClose{background:transparent;border:1px solid var(--line);color:var(--ink-dim);border-radius:999px;
+    width:38px;height:38px;font-size:15px;cursor:pointer;font-family:inherit}
+  #stageClose:hover{color:var(--ink)}
+  #stageBody{flex:1;overflow:hidden;position:relative;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 18%,#000 82%,transparent);
+            mask-image:linear-gradient(180deg,transparent,#000 18%,#000 82%,transparent)}
+  #stageScroll{position:absolute;left:0;right:0;top:0;transition:transform .7s cubic-bezier(.22,.8,.3,1);
+    padding:38vh 24px;text-align:center}
+  #stageScroll p{font-size:clamp(17px,3.4vw,24px);line-height:2.5;color:var(--ink-faint);letter-spacing:.1em;cursor:pointer;
+    opacity:.45;filter:blur(1.2px);transition:all .55s;white-space:pre-wrap}
+  #stageScroll p.near{opacity:.75;filter:blur(.4px);color:var(--ink-dim)}
+  #stageScroll p.cur{opacity:1;filter:none;color:#f2f5fd;font-size:clamp(24px,5.2vw,38px);
+    text-shadow:0 0 34px rgba(160,185,240,.35)}
+  #stageNote{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    color:var(--ink-faint);letter-spacing:.3em;font-size:14px}
+  #stageBar{height:2px;background:rgba(160,180,220,.15);margin:0 24px 26px;border-radius:2px;overflow:hidden}
+  #stageBarFill{height:100%;width:0%;background:var(--accent);transition:width .3s linear}
 </style>
 </head>
 <body>
@@ -69,8 +106,23 @@
   <div class="rule"></div>
   <div id="status">正在翻开歌单……</div>
   <div id="player"></div>
+  <div id="lrcPanel"><div id="lrcScroll"></div></div>
+  <div id="lrcNote"></div>
+  <button id="stageBtn">全 屏 歌 词</button>
 </main>
 <footer>写给每一个还没睡的人</footer>
+
+<div id="stage">
+  <div id="stageHead">
+    <div id="stageTitle"></div>
+    <button id="stageClose" title="关闭">✕</button>
+  </div>
+  <div id="stageBody">
+    <div id="stageScroll"></div>
+    <div id="stageNote">这首歌还没有歌词</div>
+  </div>
+  <div id="stageBar"><div id="stageBarFill"></div></div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"></script>
 <script>
@@ -83,6 +135,14 @@
 
   function ext(name){ var m=name.toLowerCase().match(/\.([a-z0-9]+)$/); return m?m[1]:''; }
   function base(name){ return name.replace(/\.[^.]+$/,''); }
+  /* "歌手 - 歌名" 拆分；拆不出就整名当歌名 */
+  function splitName(b){
+    var i=b.indexOf(' - ');
+    if(i>0) return {artist:b.slice(0,i).trim(), title:b.slice(i+3).trim()};
+    i=b.indexOf('-');
+    if(i>0) return {artist:b.slice(0,i).trim(), title:b.slice(i+1).trim()};
+    return {artist:'', title:b};
+  }
 
   var API='https://api.github.com/repos/'+OWNER+'/'+REPO;
   function gh(url){ return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}); }
@@ -97,45 +157,177 @@
     return list;
   }
 
+  /* ---------------- lyrics engine ---------------- */
+  function parseLrc(text){
+    var out=[];
+    (text||'').split(/\r?\n/).forEach(function(line){
+      var tags=line.match(/\[(\d{1,2}):(\d{2}(?:\.\d{1,3})?)\]/g);
+      if(!tags) return;
+      var txt=line.replace(/\[[^\]]*\]/g,'').trim();
+      tags.forEach(function(tag){
+        var m=tag.match(/\[(\d{1,2}):(\d{2}(?:\.\d{1,3})?)\]/);
+        out.push({t:parseInt(m[1],10)*60+parseFloat(m[2]), text:txt});
+      });
+    });
+    out.sort(function(a,b){return a.t-b.t;});
+    return out.filter(function(l){return l.text;});
+  }
+  function fetchText(urls){
+    var chain=Promise.reject();
+    urls.forEach(function(u){
+      chain=chain.catch(function(){
+        return fetch(u).then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); });
+      });
+    });
+    return chain;
+  }
+  function lrclibGet(artist,title,dur){
+    var q='track_name='+encodeURIComponent(title)+(artist?'&artist_name='+encodeURIComponent(artist):'')+(dur?'&duration='+Math.round(dur):'');
+    return fetch('https://lrclib.net/api/get?'+q).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  function lrclibSearch(artist,title,dur){
+    var q='track_name='+encodeURIComponent(title)+(artist?'&artist_name='+encodeURIComponent(artist):'');
+    return fetch('https://lrclib.net/api/search?'+q).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(list){
+        var cand=(list||[]).filter(function(x){ return x.syncedLyrics && !x.instrumental; });
+        if(!cand.length) return null;
+        if(dur){
+          cand.sort(function(a,b){ return Math.abs((a.duration||0)-dur)-Math.abs((b.duration||0)-dur); });
+          if(Math.abs((cand[0].duration||0)-dur)>6) return null;
+        }
+        return cand[0];
+      });
+  }
+  /* 歌词来源优先级：本地 .lrc > LRCLIB 精确匹配 > LRCLIB 搜索 */
+  function loadLyrics(idx){
+    var st=lyrState[idx];
+    if(st.status==='loading'||st.status==='done') return;
+    st.status='loading';
+    var meta=songMeta[idx], dur=durations[idx];
+    var jobs=[];
+    if(meta.lrcFile) jobs.push(fetchText(sourcesFor(encodeURIComponent(meta.lrcFile), mainSha)).then(parseLrc));
+    jobs.push(
+      lrclibGet(meta.artist, meta.title, dur)
+        .then(function(rec){ return rec && rec.syncedLyrics ? parseLrc(rec.syncedLyrics) : null; })
+        .catch(function(){ return lrclibSearch(meta.artist, meta.title, dur).then(function(rec){ return rec ? parseLrc(rec.syncedLyrics) : null; }); })
+        .catch(function(){ return null; })
+    );
+    (function next(j){
+      if(j>=jobs.length){ st.status='done'; st.lines=[]; renderLyrics(); return; }
+      jobs[j].then(function(lines){
+        if(lines && lines.length){ st.status='done'; st.lines=lines; renderLyrics(); }
+        else next(j+1);
+      }).catch(function(){ next(j+1); });
+    })(0);
+  }
+
+  var songMeta=[], songSources=[], lyrState=[], durations={};
+  var ap=null, curIdx=0, curLine=-1;
+
+  var lrcPanel=document.getElementById('lrcPanel'), lrcScroll=document.getElementById('lrcScroll'),
+      lrcNote=document.getElementById('lrcNote'), stageBtn=document.getElementById('stageBtn'),
+      stage=document.getElementById('stage'), stageScroll=document.getElementById('stageScroll'),
+      stageNote=document.getElementById('stageNote'), stageTitle=document.getElementById('stageTitle'),
+      stageBarFill=document.getElementById('stageBarFill');
+
+  function buildLines(container, lines){
+    container.innerHTML='';
+    lines.forEach(function(l,i){
+      var p=document.createElement('p');
+      p.textContent=l.text;
+      p.addEventListener('click', function(){ if(ap){ ap.audio.currentTime=l.t+0.01; ap.play(); } });
+      container.appendChild(p);
+    });
+  }
+  function renderLyrics(){
+    var st=lyrState[curIdx];
+    curLine=-1;
+    if(!st || st.status!=='done'){ lrcPanel.style.display='none'; lrcNote.style.display='none'; stageNote.style.display='none'; return; }
+    if(!st.lines.length){
+      lrcPanel.style.display='none';
+      lrcNote.textContent='这首歌还没有歌词 · 纯享旋律';
+      lrcNote.style.display='block';
+      stageNote.style.display='flex';
+      stageScroll.innerHTML='';
+      return;
+    }
+    lrcNote.style.display='none'; stageNote.style.display='none';
+    buildLines(lrcScroll, st.lines);
+    buildLines(stageScroll, st.lines);
+    lrcPanel.style.display='block';
+    syncLyrics(true);
+  }
+  function centerLine(container, wrap, i){
+    var el=container.children[i]; if(!el) return;
+    var y=el.offsetTop - wrap.clientHeight/2 + el.clientHeight/2;
+    container.style.transform='translateY('+(-y)+'px)';
+  }
+  function syncLyrics(force){
+    if(!ap) return;
+    var st=lyrState[curIdx];
+    var t=ap.audio.currentTime||0, d=ap.audio.duration||0;
+    if(d>0) stageBarFill.style.width=(t/d*100)+'%';
+    if(!st || !st.lines || !st.lines.length) return;
+    var lo=0, hi=st.lines.length-1, idx=-1;
+    while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
+    if(idx===curLine && !force) return;
+    curLine=idx;
+    [lrcScroll, stageScroll].forEach(function(container){
+      for(var i=0;i<container.children.length;i++){
+        var el=container.children[i];
+        el.className = i===idx ? 'cur' : (Math.abs(i-idx)<=2 ? 'near' : '');
+      }
+    });
+    if(idx>=0){
+      centerLine(lrcScroll, lrcPanel, idx);
+      centerLine(stageScroll, document.getElementById('stageBody'), idx);
+    }
+  }
+  setInterval(function(){ syncLyrics(false); }, 200);
+
+  stageBtn.addEventListener('click', function(){
+    stage.classList.add('open'); document.body.style.overflow='hidden'; syncLyrics(true);
+  });
+  function closeStage(){ stage.classList.remove('open'); document.body.style.overflow=''; }
+  document.getElementById('stageClose').addEventListener('click', closeStage);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeStage(); });
+
+  /* ---------------- playlist ---------------- */
+  var mainSha=null;
   Promise.all([
     gh(API+'/contents/'+DIR).then(function(r){ if(!r.ok) throw new Error('list '+r.status); return r.json(); }),
     gh(API+'/branches/main').then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; })
   ])
     .then(function(res){
       var items=res[0];
-      var sha=res[1] && res[1].commit && res[1].commit.sha;
+      mainSha=res[1] && res[1].commit && res[1].commit.sha;
       var files=(items||[]).filter(function(i){return i.type==='file';});
-      var covers={}, lrcs={};
+      var covers={}, lrcFiles={};
       files.forEach(function(f){
         var e=ext(f.name);
         if(IMG.indexOf(e)>=0) covers[base(f.name)]=CDN+encodeURIComponent(f.name);
-        if(e==='lrc') lrcs[base(f.name)]=CDN+encodeURIComponent(f.name);
+        if(e==='lrc') lrcFiles[base(f.name)]=f.name;
       });
-      var songSources=[];
-      var anyLrc=false;
       var songs=files.filter(function(f){return AUDIO.indexOf(ext(f.name))>=0;})
         .sort(function(a,b){return a.name.localeCompare(b.name,'zh');})
         .map(function(f){
-          var b=base(f.name);
-          var srcs=sourcesFor(encodeURIComponent(f.name), sha);
+          var b=base(f.name), nm=splitName(b);
+          var srcs=sourcesFor(encodeURIComponent(f.name), mainSha);
           songSources.push(srcs);
-          var s={name:b, artist:'by0628', url:srcs[0]};
+          songMeta.push({artist:nm.artist, title:nm.title, file:b, lrcFile:lrcFiles[b]||null});
+          lyrState.push({status:'idle', lines:null});
+          var s={name:nm.title, artist:nm.artist||'by0628', url:srcs[0]};
           if(covers[b]) s.cover=covers[b];
-          if(lrcs[b]){ s.lrc=lrcs[b]; anyLrc=true; }
           return s;
         });
       if(!songs.length){
         statusEl.textContent='歌单还空着——第一首歌，正在来的路上。';
         return;
       }
-      /* 没歌词就彻底关掉歌词功能，避免播放器去请求不存在的歌词文件报 404 */
-      if(anyLrc){
-        songs.forEach(function(s){ if(!s.lrc) s.lrc='data:text/plain;charset=utf-8,'; });
-      }
       statusEl.textContent='共 '+songs.length+' 首 · 点开任意一首开始';
-      var ap=new APlayer({
+      ap=new APlayer({
         container:document.getElementById('player'),
-        audio:songs, theme:'#8fa8d8', lrcType:anyLrc?3:0,
+        audio:songs, theme:'#8fa8d8', lrcType:0,
         listFolded:false, preload:'metadata', volume:0.85, mutex:true
       });
       /* 当前线路报错就自动顺延到下一条，直到能播为止 */
@@ -151,6 +343,20 @@
         ap.audio.src=srcs[next];
         if(resume) ap.play();
       });
+      ap.audio.addEventListener('loadedmetadata', function(){
+        durations[ap.list.index]=ap.audio.duration;
+        loadLyrics(ap.list.index);
+      });
+      ap.on('listswitch', function(e){
+        curIdx=e.index; curLine=-1;
+        stageTitle.textContent=songMeta[curIdx] ? (songMeta[curIdx].artist ? songMeta[curIdx].artist+' - ' : '')+songMeta[curIdx].title : '';
+        renderLyrics();
+        loadLyrics(curIdx);
+      });
+      stageTitle.textContent=(songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title;
+      stageBtn.style.display='block';
+      /* 等元数据给出时长再匹配歌词更准；3.5 秒还没等到就先直接查 */
+      setTimeout(function(){ loadLyrics(ap.list.index); }, 3500);
     })
     .catch(function(){
       statusEl.textContent='歌单暂时没打开（网络或接口限流），刷新一次试试。';
