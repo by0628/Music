@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>未寄出的歌 · by0628</title>
+<meta name="description" content="一些在深夜里写下的歌。不赶时间，慢慢听。">
+<meta name="theme-color" content="#0a0e1a">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="未寄出的歌">
+<meta property="og:title" content="未寄出的歌 · by0628">
+<meta property="og:description" content="一些在深夜里写下的歌。不赶时间，慢慢听。">
+<meta property="og:url" content="https://by0628.github.io/Music/">
+<meta property="og:image" content="https://by0628.github.io/Music/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌙%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css">
 <style>
   :root{
@@ -96,6 +106,44 @@
     color:var(--ink-faint);letter-spacing:.3em;font-size:14px}
   #stageBar{height:2px;background:rgba(160,180,220,.15);margin:0 24px 26px;border-radius:2px;overflow:hidden}
   #stageBarFill{height:100%;width:0%;background:var(--accent);transition:width .3s linear}
+
+  /* ---------- beautify pack ---------- */
+  :root{ --accent-l:#c7d5f2; }
+  .moon{transition:transform .3s ease-out}
+  #lrcScroll p.cur{color:var(--accent-l)}
+  /* rotating vinyl */
+  .aplayer .aplayer-pic{border-radius:50%!important;overflow:hidden}
+  .aplayer .aplayer-pic .pic-rot{position:absolute;inset:0;border-radius:50%;background-size:cover;background-position:center;z-index:0}
+  .aplayer .aplayer-pic .pic-rot::before{content:'';position:absolute;inset:0;border-radius:50%;
+    background:repeating-radial-gradient(circle, rgba(0,0,0,.14) 0 1px, transparent 1px 4px)}
+  .aplayer .aplayer-pic .pic-rot::after{content:'';position:absolute;left:50%;top:50%;width:27%;height:27%;
+    transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(circle,#232f4d,#0c1220 72%);border:1px solid rgba(205,220,248,.4)}
+  .aplayer .aplayer-pic .aplayer-button{z-index:2!important}
+  body.playing .aplayer .aplayer-pic .pic-rot{animation:spin 16s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* breathing dots for instrumental gaps */
+  .dots{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;gap:9px;z-index:3}
+  .dots.on{display:flex}
+  .dots span{width:7px;height:7px;border-radius:50%;background:var(--accent-l);opacity:.25;animation:breathe 1.7s ease-in-out infinite}
+  .dots span:nth-child(2){animation-delay:.28s}
+  .dots span:nth-child(3){animation-delay:.56s}
+  @keyframes breathe{0%,100%{opacity:.18;transform:scale(.8)}50%{opacity:.85;transform:scale(1.25)}}
+  /* stage style switcher */
+  .seg{display:flex;gap:8px}
+  .seg button{background:transparent;border:1px solid var(--line);color:var(--ink-faint);border-radius:999px;
+    padding:6px 14px;font-family:inherit;font-size:12px;letter-spacing:.25em;cursor:pointer;transition:all .3s}
+  .seg button.on{color:#f2f5fd;border-color:var(--accent)}
+  /* stage: single-line mode */
+  #stage.style-single #stageScroll p{visibility:hidden;opacity:0;filter:none}
+  #stage.style-single #stageScroll p.near{visibility:visible;opacity:.5;font-size:clamp(14px,2.4vw,18px);color:var(--ink-dim)}
+  #stage.style-single #stageScroll p.cur{visibility:visible;opacity:1;color:#f4f7fe;
+    font-size:clamp(30px,6.4vw,46px);text-shadow:0 0 40px rgba(170,195,245,.4)}
+  /* stage: drift mode */
+  #stage.style-drift #stageScroll p{transition:all 1.15s cubic-bezier(.22,.8,.3,1)}
+  #stage.style-drift #stageScroll p:nth-child(odd){transform:translateX(-7px)}
+  #stage.style-drift #stageScroll p:nth-child(even){transform:translateX(7px)}
+  #stage.style-drift #stageScroll p.cur{transform:translateY(-4px);letter-spacing:.2em}
 </style>
 </head>
 <body>
@@ -109,7 +157,7 @@
   <div class="rule"></div>
   <div id="status">正在翻开歌单……</div>
   <div id="player"></div>
-  <div id="lrcPanel"><div id="lrcScroll"></div></div>
+  <div id="lrcPanel"><div id="lrcScroll"></div><div class="dots" id="panelDots"><span></span><span></span><span></span></div></div>
   <div id="lrcNote"></div>
   <button id="stageBtn">全 屏 歌 词</button>
 </main>
@@ -119,10 +167,16 @@
   <div id="stageBg"></div>
   <div id="stageHead">
     <div id="stageTitle"></div>
+    <div class="seg" id="stageSeg">
+      <button data-style="classic" class="on">夜航</button>
+      <button data-style="drift">浮名</button>
+      <button data-style="single">独白</button>
+    </div>
     <button id="stageClose" title="关闭">✕</button>
   </div>
   <div id="stageBody">
     <div id="stageScroll"></div>
+    <div class="dots" id="stageDots"><span></span><span></span><span></span></div>
     <div id="stageNote">这首歌还没有歌词</div>
   </div>
   <div id="stageBar"><div id="stageBarFill"></div></div>
@@ -254,7 +308,49 @@
       var pic=document.querySelector('.aplayer-pic');
       if(pic) pic.style.backgroundImage='url("'+url+'")';
       applyStageBg();
+      vinylize();
+      tintFromCover(url);
     }
+  }
+  /* 封面取色：把主色调染进整页氛围（进度条、高亮歌词、月光） */
+  function tintFromCover(url){
+    var img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=function(){
+      try{
+        var cv=document.createElement('canvas'); cv.width=cv.height=24;
+        var cx=cv.getContext('2d'); cx.drawImage(img,0,0,24,24);
+        var d=cx.getImageData(0,0,24,24).data, r=0,g=0,b=0,w=0;
+        for(var i=0;i<d.length;i+=4){
+          var R=d[i],G=d[i+1],B=d[i+2];
+          var mx=Math.max(R,G,B), mn=Math.min(R,G,B);
+          if(mx<28||mx>245) continue;
+          var weight=0.35+((mx-mn)/255);
+          r+=R*weight; g+=G*weight; b+=B*weight; w+=weight;
+        }
+        if(!w) return;
+        r=Math.round(r/w); g=Math.round(g/w); b=Math.round(b/w);
+        /* 向夜色靠拢，避免荧光色破坏气质 */
+        r=Math.round(r*0.72+24); g=Math.round(g*0.72+30); b=Math.round(b*0.72+52);
+        var root=document.documentElement.style;
+        root.setProperty('--accent','rgb('+r+','+g+','+b+')');
+        var lr=Math.round(r+(255-r)*0.55), lg=Math.round(g+(255-g)*0.55), lb=Math.round(b+(255-b)*0.55);
+        root.setProperty('--accent-l','rgb('+lr+','+lg+','+lb+')');
+      }catch(e){ /* 取色失败就保留默认夜蓝 */ }
+    };
+    img.src=url;
+  }
+  /* 旋转唱片：把封面搬到可旋转的内层上，按钮保持不动 */
+  function vinylize(){
+    var pic=document.querySelector('.aplayer-pic');
+    if(!pic) return;
+    var rot=pic.querySelector('.pic-rot');
+    if(!rot){
+      rot=document.createElement('div'); rot.className='pic-rot';
+      pic.insertBefore(rot, pic.firstChild);
+    }
+    var cov=songMeta[curIdx] && songMeta[curIdx].cover;
+    rot.style.backgroundImage = cov ? 'url("'+cov+'")' : 'none';
   }
   function applyStageBg(){
     var bg=document.getElementById('stageBg');
@@ -318,6 +414,18 @@
     var st=lyrState[curIdx];
     var t=ap.audio.currentTime||0, d=ap.audio.duration||0;
     if(d>0) stageBarFill.style.width=(t/d*100)+'%';
+    /* 间奏呼吸点：离下一句还远、且当前句已唱完一会儿时显示 */
+    var dotsOn=false;
+    if(st && st.lines && st.lines.length){
+      var li=-1, lo2=0, hi2=st.lines.length-1;
+      while(lo2<=hi2){ var md=(lo2+hi2)>>1; if(st.lines[md].t<=t){ li=md; lo2=md+1; } else hi2=md-1; }
+      var nextT = li+1<st.lines.length ? st.lines[li+1].t : Infinity;
+      if(li===-1) dotsOn = t < st.lines[0].t-1.2;
+      else dotsOn = (nextT-t>6) && (t>st.lines[li].t+3.5);
+    }
+    document.getElementById('panelDots').classList.toggle('on', dotsOn);
+    document.getElementById('stageDots').classList.toggle('on', dotsOn);
+    updatePulse();
     if(!st || !st.lines || !st.lines.length) return;
     var lo=0, hi=st.lines.length-1, idx=-1;
     while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
@@ -335,6 +443,62 @@
     }
   }
   setInterval(function(){ syncLyrics(false); }, 200);
+
+  /* ---------- 律动光晕 ---------- */
+  var actx=null, analyser=null, vizOn=false, pulseLvl=0;
+  function initViz(){
+    if(vizOn || !ap) return;
+    if((ap.audio.src||'').indexOf('cdn.jsdelivr.net')<0) return; /* 只在跨域头齐全的主线路接分析 */
+    try{
+      var AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC) return;
+      actx=new AC();
+      var srcNode=actx.createMediaElementSource(ap.audio);
+      analyser=actx.createAnalyser();
+      analyser.fftSize=64;
+      srcNode.connect(analyser);
+      analyser.connect(actx.destination);
+      vizOn=true;
+    }catch(e){ /* 分析接不上就不接，不影响播放 */ }
+  }
+  function updatePulse(){
+    if(!vizOn || !analyser || !actx) return;
+    var arr=new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(arr);
+    var sum=0, n=8;
+    for(var i=1;i<=n;i++) sum+=arr[i];
+    var target=Math.min(1,(sum/n)/190);
+    pulseLvl += (target-pulseLvl)*0.35;
+    var moon=document.querySelector('.moon');
+    if(moon) moon.style.transform='scale('+(1+pulseLvl*0.08).toFixed(3)+')';
+    var bg=document.getElementById('stageBg');
+    if(bg) bg.style.transform='scale('+(1.03+pulseLvl*0.05).toFixed(3)+')';
+  }
+  function resetTint(){
+    var root=document.documentElement.style;
+    root.setProperty('--accent','#8fa8d8');
+    root.setProperty('--accent-l','#c7d5f2');
+  }
+
+  /* ---------- 全屏样式切换 ---------- */
+  (function(){
+    var seg=document.getElementById('stageSeg'), stageEl=document.getElementById('stage');
+    var saved='classic';
+    try{ saved=localStorage.getItem('unsentStageStyle')||'classic'; }catch(e){}
+    function applyStyle(name){
+      stageEl.classList.remove('style-drift','style-single');
+      if(name!=='classic') stageEl.classList.add('style-'+name);
+      var btns=seg.querySelectorAll('button');
+      for(var i=0;i<btns.length;i++) btns[i].classList.toggle('on', btns[i].getAttribute('data-style')===name);
+      try{ localStorage.setItem('unsentStageStyle', name); }catch(e){}
+      syncLyrics(true);
+    }
+    seg.addEventListener('click', function(e){
+      var b=e.target.closest ? e.target.closest('button') : null;
+      if(b) applyStyle(b.getAttribute('data-style'));
+    });
+    applyStyle(saved);
+  })();
 
   stageBtn.addEventListener('click', function(){
     stage.classList.add('open'); document.body.style.overflow='hidden'; syncLyrics(true);
@@ -431,12 +595,21 @@
         renderLyrics();
         loadLyrics(curIdx);
         loadCover(curIdx, false);
+        vinylize();
+        if(songMeta[curIdx].cover) tintFromCover(songMeta[curIdx].cover); else resetTint();
         applyStageBg();
       });
       stageTitle.textContent=(songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title;
       stageBtn.style.display='block';
       loadCover(0, false);
       applyStageBg();
+      vinylize();
+      ap.on('play', function(){
+        document.body.classList.add('playing');
+        initViz();
+        if(actx && actx.state==='suspended') actx.resume();
+      });
+      ap.on('pause', function(){ document.body.classList.remove('playing'); });
       /* 等元数据给出时长再匹配歌词更准；3.5 秒还没等到就先直接查 */
       setTimeout(function(){ loadLyrics(ap.list.index); }, 3500);
     })
