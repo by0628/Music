@@ -1169,7 +1169,13 @@
         if(window.refreshLangDOM) window.refreshLangDOM();
         renderLyrics();
         loadLyrics(curIdx);
-        loadCover(curIdx, false);
+        if(coverState[curIdx] && coverState[curIdx].phCover && !coverState[curIdx].done){
+          /* 现在显示的是本地生成封面：切到这首时再给线上源一次机会，线上确实没有才继续用本地的 */
+          coverState[curIdx].triedDur=false;
+          loadCover(curIdx, true);
+        }else{
+          loadCover(curIdx, false);
+        }
         vinylize();
         if(songMeta[curIdx].cover) tintFromCover(songMeta[curIdx].cover); else resetTint();
         applyStageBg();
