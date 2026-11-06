@@ -29,12 +29,21 @@
     font-family:"Songti SC","STSong","Noto Serif SC","SimSun",serif;
     overflow-x:hidden;
   }
-  #rain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5}
+  #sky{position:fixed;inset:0;z-index:0;pointer-events:none}
   .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");}
-  .moon{position:fixed;top:9vh;right:11vw;width:74px;height:74px;border-radius:50%;z-index:0;
-    background:radial-gradient(circle at 38% 35%, #fdf6dd, #e8dfae 55%, #cfc48d);
-    box-shadow:0 0 60px 18px rgba(240,230,180,.16), 0 0 140px 60px rgba(240,230,180,.06);opacity:.85}
+  /* slender crescent moon */
+  .moon{position:fixed;top:8vh;right:10vw;width:56px;height:56px;border-radius:50%;z-index:0;
+    background:radial-gradient(circle at 38% 35%, #fdf6dd, #e6dbab 58%, #c9bd87);
+    box-shadow:0 0 44px 10px rgba(240,230,180,.13), 0 0 120px 46px rgba(240,230,180,.05);
+    opacity:.92;animation:moonbreathe 7s ease-in-out infinite}
+  .moon::after{content:'';position:absolute;width:52px;height:52px;border-radius:50%;
+    background:#0b1120;top:-7px;left:17px;filter:blur(1.5px)}
+  @keyframes moonbreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+  /* accent-tinted ambience glow (progressive enhancement) */
+  body{background:
+    radial-gradient(900px 520px at 50% 16%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%),
+    radial-gradient(1200px 700px at 50% -10%, #16203c 0%, var(--bg2) 45%, var(--bg) 100%)}
   main{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:15vh 24px 90px}
   .kicker{letter-spacing:.55em;font-size:11px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:22px}
   h1{font-size:clamp(38px,8vw,58px);font-weight:400;letter-spacing:.14em;line-height:1.25;
@@ -157,7 +166,7 @@
 </style>
 </head>
 <body>
-<canvas id="rain"></canvas>
+<canvas id="sky"></canvas>
 <div class="grain"></div>
 <div class="moon"></div>
 <main>
@@ -443,7 +452,6 @@
     if(panelDotsLine) panelDotsLine.classList.toggle('on', dotsOn);
     document.getElementById('stageDots').classList.toggle('on', dotsOn);
     lrcPanel.classList.toggle('gap', dotsOn);
-    updatePulse();
     if(!st || !st.lines || !st.lines.length) return;
     var lo=0, hi=st.lines.length-1, idx=-1;
     while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
@@ -465,36 +473,6 @@
   }
   setInterval(function(){ syncLyrics(false); }, 200);
 
-  /* ---------- 律动光晕 ---------- */
-  var actx=null, analyser=null, vizOn=false, pulseLvl=0;
-  function initViz(){
-    if(vizOn || !ap) return;
-    if((ap.audio.src||'').indexOf('cdn.jsdelivr.net')<0) return; /* 只在跨域头齐全的主线路接分析 */
-    try{
-      var AC=window.AudioContext||window.webkitAudioContext;
-      if(!AC) return;
-      actx=new AC();
-      var srcNode=actx.createMediaElementSource(ap.audio);
-      analyser=actx.createAnalyser();
-      analyser.fftSize=64;
-      srcNode.connect(analyser);
-      analyser.connect(actx.destination);
-      vizOn=true;
-    }catch(e){ /* 分析接不上就不接，不影响播放 */ }
-  }
-  function updatePulse(){
-    if(!vizOn || !analyser || !actx) return;
-    var arr=new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(arr);
-    var sum=0, n=8;
-    for(var i=1;i<=n;i++) sum+=arr[i];
-    var target=Math.min(1,(sum/n)/190);
-    pulseLvl += (target-pulseLvl)*0.35;
-    var moon=document.querySelector('.moon');
-    if(moon) moon.style.transform='scale('+(1+pulseLvl*0.08).toFixed(3)+')';
-    var bg=document.getElementById('stageBg');
-    if(bg) bg.style.transform='scale('+(1.03+pulseLvl*0.05).toFixed(3)+')';
-  }
   function resetTint(){
     var root=document.documentElement.style;
     root.setProperty('--accent','#8fa8d8');
@@ -627,8 +605,6 @@
       vinylize();
       ap.on('play', function(){
         document.body.classList.add('playing');
-        initViz();
-        if(actx && actx.state==='suspended') actx.resume();
       });
       ap.on('pause', function(){ document.body.classList.remove('playing'); });
       /* 等元数据给出时长再匹配歌词更准；3.5 秒还没等到就先直接查 */
@@ -638,22 +614,27 @@
       statusEl.textContent='歌单暂时没打开（网络或接口限流），刷新一次试试。';
     });
 
-  /* gentle rain */
-  var c=document.getElementById('rain'), x=c.getContext('2d'), W, H, drops=[];
-  function resize(){ W=c.width=innerWidth; H=c.height=innerHeight; }
+  /* quiet starfield: tiny stars, slow twinkle */
+  var c=document.getElementById('sky'), x=c.getContext('2d'), W, H, stars=[];
+  function resize(){
+    W=c.width=innerWidth; H=c.height=innerHeight;
+    stars=[];
+    var n=Math.min(150, Math.floor(W*H/11000));
+    for(var i=0;i<n;i++) stars.push({x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.15+0.3, p:Math.random()*6.28, s:0.25+Math.random()*0.7});
+  }
   resize(); addEventListener('resize', resize);
-  for(var i=0;i<70;i++) drops.push({x:Math.random()*2000, y:Math.random()*1200, l:10+Math.random()*16, s:6+Math.random()*7});
-  (function tick(){
+  (function tick(t){
     x.clearRect(0,0,W,H);
-    x.strokeStyle='rgba(170,195,235,.28)'; x.lineWidth=1; x.beginPath();
-    drops.forEach(function(d){
-      x.moveTo(d.x,d.y); x.lineTo(d.x-1.5,d.y+d.l);
-      d.y+=d.s; d.x-=0.6;
-      if(d.y>H){ d.y=-20; d.x=Math.random()*(W+100); }
-    });
-    x.stroke();
+    for(var i=0;i<stars.length;i++){
+      var st=stars[i];
+      var a=0.22+0.5*(0.5+0.5*Math.sin(t*0.001*st.s+st.p));
+      x.globalAlpha=a;
+      x.fillStyle='#cdd9f2';
+      x.beginPath(); x.arc(st.x, st.y, st.r, 0, 6.283); x.fill();
+    }
+    x.globalAlpha=1;
     requestAnimationFrame(tick);
-  })();
+  })(0);
 })();
 </script>
 </body>
