@@ -112,6 +112,7 @@
         if(e==='lrc') lrcs[base(f.name)]=CDN+encodeURIComponent(f.name);
       });
       var songSources=[];
+      var anyLrc=false;
       var songs=files.filter(function(f){return AUDIO.indexOf(ext(f.name))>=0;})
         .sort(function(a,b){return a.name.localeCompare(b.name,'zh');})
         .map(function(f){
@@ -120,17 +121,21 @@
           songSources.push(srcs);
           var s={name:b, artist:'by0628', url:srcs[0]};
           if(covers[b]) s.cover=covers[b];
-          if(lrcs[b]) s.lrc=lrcs[b];
+          if(lrcs[b]){ s.lrc=lrcs[b]; anyLrc=true; }
           return s;
         });
       if(!songs.length){
         statusEl.textContent='歌单还空着——第一首歌，正在来的路上。';
         return;
       }
+      /* 没歌词就彻底关掉歌词功能，避免播放器去请求不存在的歌词文件报 404 */
+      if(anyLrc){
+        songs.forEach(function(s){ if(!s.lrc) s.lrc='data:text/plain;charset=utf-8,'; });
+      }
       statusEl.textContent='共 '+songs.length+' 首 · 点开任意一首开始';
       var ap=new APlayer({
         container:document.getElementById('player'),
-        audio:songs, theme:'#8fa8d8', lrcType:3,
+        audio:songs, theme:'#8fa8d8', lrcType:anyLrc?3:0,
         listFolded:false, preload:'metadata', volume:0.85, mutex:true
       });
       /* 当前线路报错就自动顺延到下一条，直到能播为止 */
