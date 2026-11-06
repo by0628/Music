@@ -130,6 +130,12 @@
     box-shadow:0 0 12px var(--accent);animation:breathe 1.7s ease-in-out infinite}
   #lrcPanel.gap #lrcScroll{opacity:.3}
   #lrcScroll{transition:transform .6s cubic-bezier(.22,.8,.3,1),opacity .5s}
+  .dotsline{display:flex;justify-content:center;align-items:center;gap:10px;height:36px;visibility:hidden}
+  .dotsline.on{visibility:visible}
+  .dotsline span{width:9px;height:9px;border-radius:50%;background:var(--accent-l);opacity:.25;
+    box-shadow:0 0 12px var(--accent);animation:breathe 1.7s ease-in-out infinite}
+  .dotsline span:nth-child(2){animation-delay:.28s}
+  .dotsline span:nth-child(3){animation-delay:.56s}
   .dots span:nth-child(2){animation-delay:.28s}
   .dots span:nth-child(3){animation-delay:.56s}
   @keyframes breathe{0%,100%{opacity:.18;transform:scale(.8)}50%{opacity:.85;transform:scale(1.25)}}
@@ -161,7 +167,7 @@
   <div class="rule"></div>
   <div id="status">正在翻开歌单……</div>
   <div id="player"></div>
-  <div id="lrcPanel"><div id="lrcScroll"></div><div class="dots" id="panelDots"><span></span><span></span><span></span></div></div>
+  <div id="lrcPanel"><div id="lrcScroll"></div></div>
   <div id="lrcNote"></div>
   <button id="stageBtn">全 屏 歌 词</button>
 </main>
@@ -381,8 +387,15 @@
       stageNote=document.getElementById('stageNote'), stageTitle=document.getElementById('stageTitle'),
       stageBarFill=document.getElementById('stageBarFill');
 
+  var panelDotsLine=null;
   function buildLines(container, lines){
     container.innerHTML='';
+    if(container===lrcScroll){
+      panelDotsLine=document.createElement('div');
+      panelDotsLine.className='dotsline';
+      panelDotsLine.innerHTML='<span></span><span></span><span></span>';
+      container.appendChild(panelDotsLine);
+    }
     lines.forEach(function(l,i){
       var p=document.createElement('p');
       p.textContent=l.text;
@@ -409,7 +422,7 @@
     syncLyrics(true);
   }
   function centerLine(container, wrap, i){
-    var el=container.children[i]; if(!el) return;
+    var el=container.querySelectorAll('p')[i]; if(!el) return;
     var y=el.offsetTop - wrap.clientHeight/2 + el.clientHeight/2;
     container.style.transform='translateY('+(-y)+'px)';
   }
@@ -427,7 +440,7 @@
       if(li===-1) dotsOn = t < st.lines[0].t-1.2;
       else dotsOn = (nextT-t>6) && (t>st.lines[li].t+3.5);
     }
-    document.getElementById('panelDots').classList.toggle('on', dotsOn);
+    if(panelDotsLine) panelDotsLine.classList.toggle('on', dotsOn);
     document.getElementById('stageDots').classList.toggle('on', dotsOn);
     lrcPanel.classList.toggle('gap', dotsOn);
     updatePulse();
@@ -437,9 +450,12 @@
     if(idx===curLine && !force) return;
     curLine=idx;
     [lrcScroll, stageScroll].forEach(function(container){
+      var li2=0;
       for(var i=0;i<container.children.length;i++){
         var el=container.children[i];
-        el.className = i===idx ? 'cur' : (Math.abs(i-idx)<=2 ? 'near' : '');
+        if(el.tagName!=='P') continue;
+        el.className = li2===idx ? 'cur' : (Math.abs(li2-idx)<=2 ? 'near' : '');
+        li2++;
       }
     });
     if(idx>=0){
