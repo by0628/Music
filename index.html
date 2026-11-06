@@ -18,7 +18,7 @@
 <meta property="og:image" content="https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/f4/3e/72/f43e726a-5f6c-5fa5-8b3e-5d5afd70b284/4711228312467.jpg/600x600bb.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌫️%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css">
+<link rel="stylesheet" href="assets/APlayer.min.css">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5.2.5/400.css">
@@ -337,7 +337,7 @@
   <div id="stageBar"><div id="stageBarFill"></div></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"></script>
+<script src="assets/APlayer.min.js"></script>
 <script>
 (function(){
   var OWNER='by0628', REPO='Music', DIR='songs';
@@ -360,7 +360,7 @@
   var API='https://api.github.com/repos/'+OWNER+'/'+REPO;
   function gh(url){ return fetch(url,{headers:{'Accept':'application/vnd.github+json'}}); }
   /* 每首歌准备多条线路，一条不通自动换下一条 */
-  function sourcesFor(enc, sha, big){
+  function sourcesFor(enc, big){
     /* 大文件（≥20MB）：jsDelivr 有 20MB 上限、必然 403，跳过它走 Pages/raw，少等两轮失败 */
     if(big){
       return [
@@ -370,7 +370,6 @@
       ];
     }
     var list=[];
-    if(sha) list.push('https://cdn.jsdelivr.net/gh/'+OWNER+'/'+REPO+'@'+sha+'/'+DIR+'/'+enc);
     list.push('https://cdn.jsdelivr.net/gh/'+OWNER+'/'+REPO+'@main/'+DIR+'/'+enc);
     list.push('https://cdn.statically.io/gh/'+OWNER+'/'+REPO+'/main/'+DIR+'/'+enc);
     list.push('https://raw.githubusercontent.com/'+OWNER+'/'+REPO+'/main/'+DIR+'/'+enc);
@@ -506,7 +505,7 @@
     st.status='loading';
     var meta=songMeta[idx], dur=durations[idx];
     var jobs=[];
-    if(meta.lrcFile) jobs.push(fetchText(sourcesFor(encodeURIComponent(meta.lrcFile), mainSha)).then(parseLrc));
+    if(meta.lrcFile) jobs.push(fetchText(sourcesFor(encodeURIComponent(meta.lrcFile))).then(parseLrc));
     jobs.push(Promise.resolve(lrcCacheGet(meta)));
     jobs.push(
       lrclibGet(meta.artist, meta.title, dur)
@@ -1143,7 +1142,7 @@
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeStage(); });
 
   /* ---------------- playlist ---------------- */
-  var mainSha=null;
+  var mainSha=null; /* 已弃用：不再调 branches 取 sha，jsDelivr 只用 @main 线路（保留变量防旧引用报错） */
   /* 歌单优先走 jsDelivr 的文件清单接口（CDN 侧、不限流）；
      GitHub 接口有每小时 60 次的匿名限额、且共用出口 IP 时容易被别人耗尽，只作兜底 */
   function listViaJsdelivr(){
@@ -1162,36 +1161,58 @@
       });
   }
   function listViaGithub(){
-    return gh(API+'/contents/'+DIR)
-      .then(function(r){ if(!r.ok) throw new Error('list '+r.status); return r.json(); })
-      .then(function(items){
-        return (items||[]).filter(function(i){return i.type==='file';}).map(function(i){return {name:i.name, size:i.size||0};});
+    /* 一次 trees 调用同时拿到文件名和大小；原来的 contents+branches 两次调用太费匿名限额（60 次/小时） */
+    return gh(API+'/git/trees/main?recursive=1')
+      .then(function(r){ if(!r.ok) throw new Error('tree '+r.status); return r.json(); })
+      .then(function(d){
+        var out=[], prefix=DIR+'/';
+        (d.tree||[]).forEach(function(it){
+          if(it.type!=='blob' || it.path.indexOf(prefix)!==0) return;
+          var rest=it.path.slice(prefix.length);
+          if(rest && rest.indexOf('/')<0) out.push({name:rest, size:it.size||0});
+        });
+        if(!out.length) throw new Error('empty');
+        return out;
       });
   }
   /* 两边清单取并集：jsDelivr 不限流但索引更新慢（新歌要等它刷新）；
      GitHub 实时但有匿名限额。并集让新歌立刻出现，GitHub 被限流时还有 jsDelivr 兜底 */
   function settle(p){ return p.then(function(v){ return {ok:true, v:v}; }, function(){ return {ok:false}; }); }
-  var listPromise=Promise.all([settle(listViaJsdelivr()), settle(listViaGithub())])
-    .then(function(rs){
-      var seen={}, names=[];
-      rs.forEach(function(r){
-        if(!r.ok) return;
-        (r.v||[]).forEach(function(it){
-          if(!it || !it.name) return;
-          if(!seen[it.name]){ seen[it.name]=it; names.push(it); }
-          else if(!seen[it.name].size && it.size) seen[it.name].size=it.size; /* 两路并集时把文件大小也带上，大文件分流要用 */
+  /* 歌单缓存：10 分钟内重复打开直接用缓存（0 次接口调用）；拉取失败/被限流时回退缓存渲染旧歌单，不让页面空着。
+     带 ?v= 的链接（自测新歌时用）强制绕过缓存拿最新清单 */
+  var LIST_KEY='unsentListV1';
+  function readListCache(){
+    try{ var o=JSON.parse(localStorage.getItem(LIST_KEY)||'null');
+      if(o && o.files && o.files.length) return o;
+    }catch(e){}
+    return null;
+  }
+  function fetchListUnion(){
+    return Promise.all([settle(listViaJsdelivr()), settle(listViaGithub())])
+      .then(function(rs){
+        var seen={}, names=[];
+        rs.forEach(function(r){
+          if(!r.ok) return;
+          (r.v||[]).forEach(function(it){
+            if(!it || !it.name) return;
+            if(!seen[it.name]){ seen[it.name]=it; names.push(it); }
+            else if(!seen[it.name].size && it.size) seen[it.name].size=it.size; /* 两路并集时把文件大小也带上，大文件分流要用 */
+          });
         });
+        if(!names.length) throw new Error('no list');
+        try{ localStorage.setItem(LIST_KEY, JSON.stringify({t:Date.now(), files:names})); }catch(e){}
+        return names;
       });
-      if(!names.length) throw new Error('no list');
-      return names;
-    });
-  Promise.all([
-    listPromise,
-    gh(API+'/branches/main').then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; })
-  ])
-    .then(function(res){
-      mainSha=res[1] && res[1].commit && res[1].commit.sha;
-      var files=res[0];
+  }
+  var cachedList=readListCache();
+  var listPromise;
+  if(cachedList && !/[?&]v=/.test(location.search) && (Date.now()-(cachedList.t||0))<600000){
+    listPromise=Promise.resolve(cachedList.files);
+  }else{
+    listPromise=fetchListUnion().then(null, function(){ if(cachedList) return cachedList.files; throw new Error('no list'); });
+  }
+  listPromise
+    .then(function(files){
       var covers={}, lrcFiles={};
       files.forEach(function(f){
         var e=ext(f.name);
@@ -1202,7 +1223,7 @@
         .sort(function(a,b){return a.name.localeCompare(b.name,'zh');})
         .map(function(f){
           var b=base(f.name), nm=splitName(b);
-          var srcs=sourcesFor(encodeURIComponent(f.name), mainSha, (f.size||0) >= 20*1024*1024);
+          var srcs=sourcesFor(encodeURIComponent(f.name), (f.size||0) >= 20*1024*1024);
           songSources.push(srcs);
           songMeta.push({artist:nm.artist, title:nm.title, file:b, lrcFile:lrcFiles[b]||null, cover:covers[b]||null});
           lyrState.push({status:'idle', lines:null});
