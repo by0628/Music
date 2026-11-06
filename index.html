@@ -108,6 +108,24 @@
     box-shadow:inset 3px 0 0 var(--accent)}
   .aplayer .aplayer-list ol li .aplayer-list-index{color:var(--ink-faint)!important;margin-right:12px!important}
   .aplayer .aplayer-list ol li .aplayer-list-author{color:var(--ink-faint)!important}
+  /* 按作者分组的自建歌单（替代播放器自带列表） */
+  .aplayer .aplayer-list{display:none!important}
+  .aplayer .aplayer-icon-menu{display:none!important}
+  #groups{position:relative;z-index:2;margin:18px auto 0;padding:8px 14px 14px;
+    background:var(--card);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);
+    border:1px solid var(--glass-brd);border-radius:26px;box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi)}
+  .grp-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    padding:15px 8px 9px;border-bottom:1px solid var(--line)}
+  .grp-h .nm{font-size:15px;letter-spacing:.22em;color:var(--ink)}
+  .grp-h .cnt{font-size:11px;letter-spacing:.18em;color:var(--ink-faint)}
+  .grp-row{display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:12px;cursor:pointer;
+    color:var(--ink-dim);transition:background .3s,color .3s}
+  .grp-row:hover{background:var(--row-hover)}
+  .grp-row.on{background:var(--row-on);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
+  .grp-row .no{font-size:11px;color:var(--ink-faint);min-width:20px;text-align:right;letter-spacing:.05em}
+  .grp-row.on .no{color:var(--accent-d)}
+  .grp-row .tt{flex:1;font-size:14.5px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .grp-row .dur{font-size:12px;color:var(--ink-faint);letter-spacing:.05em}
   footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
 
   /* ---------- lyrics ---------- */
@@ -272,6 +290,7 @@
   <div class="rule"></div>
   <div id="status">正在翻开歌单……</div>
   <div id="player"></div>
+  <div id="groups" style="display:none"></div>
   <div id="lrcPanel"><div id="lrcScroll"></div></div>
   <div id="lrcNote"></div>
   <button id="stageBtn">全 屏 歌 词</button>
@@ -571,6 +590,51 @@
   }
   setInterval(function(){ syncLyrics(false); }, 200);
 
+  /* ---------- 按作者分组的歌单（自建，替代播放器自带列表；新歌按文件名歌手自动归组） ---------- */
+  var groupsEl=document.getElementById('groups');
+  function fmtDur(sec){
+    if(!sec || !isFinite(sec)) return '';
+    sec=Math.round(sec);
+    return Math.floor(sec/60)+':'+('0'+(sec%60)).slice(-2);
+  }
+  function markGroupCurrent(){
+    if(!groupsEl) return;
+    var rows=groupsEl.querySelectorAll('.grp-row');
+    for(var i=0;i<rows.length;i++) rows[i].classList.toggle('on', +rows[i].getAttribute('data-gi')===curIdx);
+  }
+  function buildGroups(){
+    if(!groupsEl || !songMeta.length) return;
+    var TT=function(s){ return window.T ? window.T(s) : s; };
+    var byArtist={}, order=[];
+    songMeta.forEach(function(m,i){
+      var a=m.artist||'佚名';
+      if(!byArtist[a]){ byArtist[a]=[]; order.push(a); }
+      byArtist[a].push(i);
+    });
+    order.sort(function(x,y){ return byArtist[y].length-byArtist[x].length || x.localeCompare(y,'zh-Hans-CN'); });
+    groupsEl.innerHTML='';
+    order.forEach(function(a){
+      var h=document.createElement('div'); h.className='grp-h';
+      var nm=document.createElement('span'); nm.className='nm'; nm.textContent=TT(a);
+      var cnt=document.createElement('span'); cnt.className='cnt'; cnt.textContent=byArtist[a].length+' 首';
+      h.appendChild(nm); h.appendChild(cnt);
+      groupsEl.appendChild(h);
+      byArtist[a].forEach(function(gi,n){
+        var r=document.createElement('div'); r.className='grp-row'; r.setAttribute('data-gi',gi);
+        var no=document.createElement('span'); no.className='no'; no.textContent=('0'+(n+1)).slice(-2);
+        var tt=document.createElement('span'); tt.className='tt'; tt.textContent=TT(songMeta[gi].title);
+        var du=document.createElement('span'); du.className='dur'; du.textContent=fmtDur(durations[gi]);
+        r.appendChild(no); r.appendChild(tt); r.appendChild(du);
+        r.addEventListener('click', function(){ if(ap){ ap.list.switch(gi); ap.play(); } });
+        groupsEl.appendChild(r);
+      });
+    });
+    groupsEl.style.display='block';
+    statusEl.textContent=TT('共 '+songMeta.length+' 首 · '+order.length+' 位作者 · 已按作者分好组');
+    markGroupCurrent();
+  }
+  window.buildGroups=buildGroups;
+
   function resetTint(){ curTint=null; applyVars(); }
 
   /* 莫蘭迪色按深/淺主題派生：淺色往白裡調，深色往黑裡沉 */
@@ -739,6 +803,7 @@
       applyStatic();
       if(ap){ try{ renderLyrics(); }catch(e){} }
       refreshLangDOM();
+      if(window.buildGroups){ try{ window.buildGroups(); }catch(e){} }
     }
     function ensureConv(){
       if(conv){ applyAll(); return; }
@@ -913,11 +978,14 @@
       });
       ap.audio.addEventListener('loadedmetadata', function(){
         durations[ap.list.index]=ap.audio.duration;
+        var drow=groupsEl ? groupsEl.querySelector('.grp-row[data-gi="'+ap.list.index+'"] .dur') : null;
+        if(drow) drow.textContent=fmtDur(ap.audio.duration);
         loadLyrics(ap.list.index);
         loadCover(ap.list.index, true);
       });
       ap.on('listswitch', function(e){
         curIdx=e.index; curLine=-1;
+        markGroupCurrent();
         stageTitle.textContent=T(songMeta[curIdx] ? (songMeta[curIdx].artist ? songMeta[curIdx].artist+' - ' : '')+songMeta[curIdx].title : '');
         if(window.refreshLangDOM) window.refreshLangDOM();
         renderLyrics();
@@ -927,6 +995,7 @@
         if(songMeta[curIdx].cover) tintFromCover(songMeta[curIdx].cover); else resetTint();
         applyStageBg();
       });
+      buildGroups();
       stageTitle.textContent=T((songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title);
       stageBtn.style.display='block';
       loadCover(0, false);
