@@ -544,7 +544,8 @@
         if(dur){
           var inWin=res.filter(function(x){ return Math.abs((x.trackTimeMillis||0)/1000-dur)<=4; });
           if(!inWin.length) return null;
-          pick=inWin.filter(function(x){ return norm(x.trackName)===norm(meta.title); })[0]
+          pick=inWin.filter(function(x){ return norm(x.trackName)===norm(meta.title) && norm(x.artistName)===norm(meta.artist); })[0]
+            || inWin.filter(function(x){ return norm(x.trackName)===norm(meta.title); })[0]
             || inWin.filter(function(x){ return norm(x.artistName)===norm(meta.artist); })[0]
             || inWin[0];
         }else{
@@ -635,7 +636,7 @@
     var url='https://c.y.qq.com/soso/fcgi-bin/client_search_cp?format=jsonp&p=1&n=6&aggr=1&lossless=0&flag_qc=0&w='+encodeURIComponent(w);
     return jsonp(url, 9000, 'jsonpCallback').then(function(d){
       var list=(d && d.data && d.data.song && d.data.song.list)||[];
-      var scored=list.filter(function(x){ return x.albummid; }).map(function(x){
+      var scored=list.filter(function(x){ return x.albummid; }).map(function(x, i){
         var s=0;
         if(norm(x.songname||'')===norm(meta.title)) s+=4;
         var singers=(x.singer||[]).map(function(sg){ return sg.name||''; }).join(' ');
@@ -643,10 +644,11 @@
           if(norm(singers)===norm(meta.artist)) s+=3;
           else if(norm(singers).indexOf(norm(meta.artist))>=0) s+=2;
         }
-        return {x:x, s:s, dd: dur ? Math.abs((x.interval||0)-dur) : 0};
+        return {x:x, s:s, dd: dur ? Math.abs((x.interval||0)-dur) : 0, i:i};
       }).filter(function(o){ return o.s>=4 && (!dur || o.dd<=4); });
       if(!scored.length) return null;
-      scored.sort(function(a,b){ return (b.s-a.s) || (a.dd-b.dd); });
+      /* 分数、时长差都相同时，信 QQ 自己的排序（官方版通常排最前，防翻唱/钢琴版同分抢位） */
+      scored.sort(function(a,b){ return (b.s-a.s) || (a.dd-b.dd) || (a.i-b.i); });
       var urls=scored.slice(0,2).map(function(o){ return 'https://y.qq.com/music/photo_new/T002R500x500M000'+o.x.albummid+'.jpg'; });
       return verifyImgUrls(urls, 0);
     }).catch(function(){ return null; });
