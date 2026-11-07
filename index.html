@@ -15,7 +15,10 @@
 <meta property="og:title" content="雾中来信 · by0628">
 <meta property="og:description" content="一些在深夜里写下的歌。不赶时间，慢慢听。">
 <meta property="og:url" content="https://by0628.github.io/Music/">
-<meta property="og:image" content="https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/f4/3e/72/f43e726a-5f6c-5fa5-8b3e-5d5afd70b284/4711228312467.jpg/600x600bb.jpg">
+<meta property="og:image" content="https://cdn.jsdelivr.net/gh/by0628/Music@main/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/gh/by0628/Music@main/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌫️%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/APlayer.min.css">
@@ -275,9 +278,19 @@
   @media (hover:hover){ .aplayer:hover,#groups:hover{transform:translateY(-2px)} }
   .grp-row:active{transform:scale(.99)}
   .grp-row{transition:background .3s,color .3s,transform .15s}
+  /* 封面氛围背景：当前封面虚化铺满整页，随歌交叉淡入（无真封面时自动隐去，保持雾面） */
+  #ambient{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+  .amb-layer{position:absolute;inset:-70px;background-size:cover;background-position:center;filter:var(--stagebg-filter);opacity:0;transition:opacity 1.8s ease}
+  .amb-layer.on{opacity:.6}
+  :root[data-theme="dark"] .amb-layer.on{opacity:.5}
+  #ambient::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,color-mix(in srgb,var(--wash) 30%,transparent),color-mix(in srgb,var(--wash2) 58%,transparent))}
+  /* 歌词扫光：当前行按演唱进度横向点亮 */
+  #lrcScroll p.cur,#stageScroll p.cur{background-image:linear-gradient(90deg,var(--accent-d) var(--p,100%),color-mix(in srgb,var(--accent-d) 24%,transparent) var(--p,100%));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  #stage.style-paper #stageScroll p.cur{background-image:none;-webkit-text-fill-color:currentColor}
 </style>
 </head>
 <body>
+<div id="ambient"><div class="amb-layer" id="ambA"></div><div class="amb-layer" id="ambB"></div></div>
 <div class="grain"></div>
 <main>
   <div class="kicker">by0628 · songs</div>
@@ -583,6 +596,7 @@
       var pic=document.querySelector('.aplayer-pic');
       if(pic) pic.style.backgroundImage='url("'+url+'")';
       applyStageBg();
+      updateMS();
       vinylize();
       tintFromCover(url);
     }
@@ -629,8 +643,41 @@
   function applyStageBg(){
     var bg=document.getElementById('stageBg');
     var cov=songMeta[curIdx] && songMeta[curIdx].cover;
+    updateAmbient(cov||'');
     if(cov){ bg.style.backgroundImage='url("'+cov+'")'; bg.style.opacity='1'; }
     else { bg.style.opacity='0'; }
+  }
+  /* 氛围背景：与全屏舞台共用当前封面，双层交叉淡入 */
+  var ambCur='';
+  function updateAmbient(url){
+    url=url||'';
+    if(url===ambCur) return; ambCur=url;
+    var A=document.getElementById('ambA'), B=document.getElementById('ambB');
+    if(!A||!B) return;
+    var showEl=A.classList.contains('on')?B:A, hideEl=(showEl===A)?B:A;
+    if(url){ showEl.style.backgroundImage='url("'+url+'")'; showEl.classList.add('on'); }
+    hideEl.classList.remove('on');
+  }
+  /* 锁屏/耳机控制：把歌名、歌手、封面报给系统媒体会话 */
+  function updateMS(){
+    if(!('mediaSession' in navigator) || !ap) return;
+    var m=songMeta[curIdx]; if(!m) return;
+    var arts=[];
+    if(m.cover) arts=[{src:m.cover, sizes:'512x512', type:'image/jpeg'}];
+    try{ navigator.mediaSession.metadata=new MediaMetadata({title:m.title||'', artist:m.artist||'', album:'雾中来信', artwork:arts}); }catch(e){}
+  }
+  /* 下一首预热：用一个不发声的 Audio 把下一首音频提前拉进缓存，切歌秒开 */
+  var warmAudio=null, warmUrl='';
+  function warmNext(){
+    try{
+      if(!songSources || songSources.length<2) return;
+      var nx=(curIdx+1)%songSources.length;
+      if(nx===curIdx || !songSources[nx] || !songSources[nx][0]) return;
+      var u=songSources[nx][0];
+      if(u===warmUrl) return; warmUrl=u;
+      if(!warmAudio){ warmAudio=new Audio(); warmAudio.preload='auto'; }
+      warmAudio.src=u;
+    }catch(e){}
   }
   /* JSONP 小工具：给不支持 CORS 的国内接口用（脚本标签不受同源限制）
      注意：QQ 搜索接口不认 callback 参数（写了也白写、固定用 callback 包裹），只认 jsonpCallback，
@@ -832,6 +879,26 @@
     }
   }
   setInterval(function(){ syncLyrics(false); }, 200);
+  /* 歌词扫光进度：每 100ms 更新当前行点亮比例 --p（只写样式，不动播放链） */
+  var sweepLast={i:-1,p:-1};
+  function sweepTick(){
+    if(!ap) return;
+    var st=lyrState[curIdx]; if(!st || !st.lines || !st.lines.length) return;
+    var t=ap.audio.currentTime||0, d=ap.audio.duration||0;
+    var lo=0, hi=st.lines.length-1, idx=-1;
+    while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
+    if(idx<0) return;
+    var start=st.lines[idx].t;
+    var end=(idx+1<st.lines.length)?st.lines[idx+1].t:(d||start+5);
+    if(end<=start) end=start+0.5;
+    var pct=Math.max(0,Math.min(100,(t-start)/(end-start)*100));
+    if(idx===sweepLast.i && Math.abs(pct-sweepLast.p)<0.6) return;
+    sweepLast={i:idx,p:pct};
+    [lrcScroll, stageScroll].forEach(function(c){
+      var el=c.querySelectorAll('p')[idx]; if(el) el.style.setProperty('--p', pct.toFixed(1)+'%');
+    });
+  }
+  setInterval(sweepTick, 100);
 
   /* ---------- 按作者分组的歌单（自建，替代播放器自带列表；新歌按文件名歌手自动归组） ---------- */
   var groupsEl=document.getElementById('groups');
@@ -1426,9 +1493,12 @@
         vinylize();
         if(songMeta[curIdx].cover) tintFromCover(songMeta[curIdx].cover); else resetTint();
         applyStageBg();
+        updateMS();
+        warmNext();
       });
       buildGroups();
       preloadAll();
+      warmNext();
       stageTitle.textContent=T((songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title);
       stageBtn.style.display='block';
       loadCover(0, false);
@@ -1436,8 +1506,23 @@
       vinylize();
       ap.on('play', function(){
         document.body.classList.add('playing');
+        if('mediaSession' in navigator) try{ navigator.mediaSession.playbackState='playing'; }catch(e){}
       });
-      ap.on('pause', function(){ document.body.classList.remove('playing'); });
+      ap.on('pause', function(){
+        document.body.classList.remove('playing');
+        if('mediaSession' in navigator) try{ navigator.mediaSession.playbackState='paused'; }catch(e){}
+      });
+      if('mediaSession' in navigator){
+        try{
+          var msA=navigator.mediaSession;
+          msA.setActionHandler('play', function(){ ap.play(); });
+          msA.setActionHandler('pause', function(){ ap.pause(); });
+          msA.setActionHandler('previoustrack', function(){ ap.skipBack(); });
+          msA.setActionHandler('nexttrack', function(){ ap.skipForward(); });
+          msA.setActionHandler('seekto', function(d){ if(d && d.seekTime!=null) ap.audio.currentTime=d.seekTime; });
+        }catch(e){}
+        updateMS();
+      }
       /* 等元数据给出时长再匹配歌词更准；3.5 秒还没等到就先直接查 */
       setTimeout(function(){ loadLyrics(ap.list.index); }, 3500);
     })
