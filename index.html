@@ -33,6 +33,7 @@
     --line:rgba(70,84,92,.16);
     --wash:#e9edeb; --wash2:#dde3e0;
     --accent:#7d8b96; --accent-l:#b9c4c9; --accent-d:#57646c;
+    --sweep-dim:rgba(58,65,71,.28);
     --card:rgba(255,255,255,.55);
     --glass-brd:rgba(255,255,255,.65);
     --glass-hi:rgba(255,255,255,.55);
@@ -56,6 +57,7 @@
     --row-hover:rgba(255,255,255,.06);
     --row-on:rgba(255,255,255,.1);
     --shadow:0 18px 44px rgba(0,0,0,.45);
+    --sweep-dim:rgba(221,227,230,.26);
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{min-height:100%}
@@ -184,7 +186,7 @@
   #stageScroll{position:absolute;left:0;right:0;top:0;transition:transform .7s cubic-bezier(.22,.8,.3,1);
     padding:38vh 24px;text-align:center}
   #stageScroll p{font-size:clamp(calc(17px * var(--fs)),calc(3.4vw * var(--fs)),calc(24px * var(--fs)));line-height:2.5;color:var(--ink-faint);letter-spacing:.1em;cursor:pointer;
-    opacity:.5;filter:blur(1.2px);transition:all .55s;white-space:pre-wrap}
+    opacity:.5;filter:blur(1.2px);transition:font-size .55s,color .55s,opacity .55s,filter .55s,transform .55s,letter-spacing .55s;white-space:pre-wrap}
   #stageScroll p.near{opacity:.8;filter:blur(.4px);color:var(--ink-dim)}
   #stageScroll p.cur{opacity:1;filter:none;color:#2e353a;font-size:clamp(calc(24px * var(--fs)),calc(5.2vw * var(--fs)),calc(38px * var(--fs)))}
   #stageNote{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
@@ -244,12 +246,12 @@
   #stage.style-single #stageScroll p.cur{visibility:visible;opacity:1;color:var(--accent-d);
     font-size:clamp(calc(30px * var(--fs)),calc(6.4vw * var(--fs)),calc(46px * var(--fs)))}
   /* stage: drift mode */
-  #stage.style-drift #stageScroll p{transition:all 1.15s cubic-bezier(.22,.8,.3,1)}
+  #stage.style-drift #stageScroll p{transition:font-size 1.15s cubic-bezier(.22,.8,.3,1),color 1.15s,opacity 1.15s,filter 1.15s,transform 1.15s,letter-spacing 1.15s}
   #stage.style-drift #stageScroll p:nth-child(odd){transform:translateX(-7px)}
   #stage.style-drift #stageScroll p:nth-child(even){transform:translateX(7px)}
   #stage.style-drift #stageScroll p.cur{transform:translateY(-4px);letter-spacing:.2em}
   /* stage: tide mode — lines swell like a tide as they approach */
-  #stage.style-tide #stageScroll p{transform:scale(.93);opacity:.38;transition:all .9s cubic-bezier(.22,.8,.3,1)}
+  #stage.style-tide #stageScroll p{transform:scale(.93);opacity:.38;transition:font-size .9s cubic-bezier(.22,.8,.3,1),color .9s,opacity .9s,filter .9s,transform .9s,letter-spacing .9s}
   #stage.style-tide #stageScroll p.near{transform:scale(1.03);opacity:.8}
   #stage.style-tide #stageScroll p.cur{transform:scale(1.12);opacity:1}
   /* stage: cinema mode — one subtitle line, low and wide */
@@ -284,9 +286,28 @@
   .amb-layer.on{opacity:.6}
   :root[data-theme="dark"] .amb-layer.on{opacity:.5}
   #ambient::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,color-mix(in srgb,var(--wash) 30%,transparent),color-mix(in srgb,var(--wash2) 58%,transparent))}
-  /* 歌词扫光：当前行按演唱进度横向点亮 */
-  #lrcScroll p.cur,#stageScroll p.cur{background-image:linear-gradient(90deg,var(--accent-d) var(--p,100%),color-mix(in srgb,var(--accent-d) 24%,transparent) var(--p,100%));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-  #stage.style-paper #stageScroll p.cur{background-image:none;-webkit-text-fill-color:currentColor}
+  /* 歌词扫光：当前行按演唱进度从左到右点亮。
+     ① 不用 color-mix()——老安卓 WebView / 部分国产内核不认它，整条 background-image 会被丢弃，
+        再叠加 -webkit-text-fill-color:transparent 就会让当前行彻底透明，这正是机主手机上看不到扫光的主因。
+     ② 未点亮色用固定 rgba(--sweep-dim)，点亮色用 --accent-d，只依赖 var(--p) 百分比。
+     ③ --p 默认 0%（不是 100%）：新歌词行还没被扫光逻辑写到时不会整行全亮、看不出变化。 */
+  #lrcScroll p.cur,#stageScroll p.cur{
+    background-image:linear-gradient(90deg,var(--accent-d) 0,var(--accent-d) var(--p,0%),var(--sweep-dim) var(--p,0%),var(--sweep-dim) 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--accent-d)}
+  /* 老内核不支持 background-clip:text 时退回纯色，绝不让当前行消失 */
+  @supports not ((-webkit-background-clip:text) or (background-clip:text)){
+    #lrcScroll p.cur,#stageScroll p.cur{background-image:none;-webkit-text-fill-color:currentColor}
+  }
+  /* 全屏 6 种舞台样式里的 color / visibility / filter 规则不得盖掉扫光：
+     用同等及以上特异性把 .cur 的渐变与透明填充重新钉死，
+     style-paper 原先的 background-image:none / currentColor 已移除（下划线等原设计保留）。 */
+  #stage.style-single #stageScroll p.cur,
+  #stage.style-drift #stageScroll p.cur,
+  #stage.style-tide #stageScroll p.cur,
+  #stage.style-cinema #stageScroll p.cur,
+  #stage.style-paper #stageScroll p.cur{
+    -webkit-text-fill-color:transparent;
+    background-image:linear-gradient(90deg,var(--accent-d) 0,var(--accent-d) var(--p,0%),var(--sweep-dim) var(--p,0%),var(--sweep-dim) 100%)}
 </style>
 </head>
 <body>
@@ -658,13 +679,50 @@
     if(url){ showEl.style.backgroundImage='url("'+url+'")'; showEl.classList.add('on'); }
     hideEl.classList.remove('on');
   }
-  /* 锁屏/耳机控制：把歌名、歌手、封面报给系统媒体会话 */
+  /* 锁屏/耳机控制：把歌名、歌手、封面报给系统媒体会话。
+     重要：网页没有真正的「锁屏歌词」接口，系统也不承诺显示 album 字段。
+     这里只是把当前正在唱的那一行塞进 MediaMetadata.album，属于近似实现，
+     锁屏/通知栏是否展示、展示成什么样完全由系统决定。 */
+  var MS_FALLBACK_ALBUM='雾中来信';
+  var msAlbum=MS_FALLBACK_ALBUM, msSig='';
+  /* MediaMetadata.artwork 只吃绝对地址：把站内相对路径补成 https 绝对 URL，http 一律丢弃 */
+  function absHttps(u){
+    if(!u) return '';
+    try{
+      var a=new URL(u, location.href).href;
+      return /^https:\/\//i.test(a) ? a : '';
+    }catch(e){ return ''; }
+  }
+  function msArtwork(src){
+    if(!src) return [];
+    var t=/\.png(\?|#|$)/i.test(src)?'image/png':(/\.webp(\?|#|$)/i.test(src)?'image/webp':'image/jpeg');
+    /* 同一张真封面声明 256 / 512 两种尺寸；匹配不到真封面就给空数组，绝不生成或上传占位图 */
+    return [{src:src,sizes:'256x256',type:t},{src:src,sizes:'512x512',type:t}];
+  }
+  function syncPlaybackState(){
+    if(!('mediaSession' in navigator) || !ap) return;
+    try{ navigator.mediaSession.playbackState = ap.audio.paused ? 'paused' : 'playing'; }catch(e){}
+  }
   function updateMS(){
     if(!('mediaSession' in navigator) || !ap) return;
     var m=songMeta[curIdx]; if(!m) return;
-    var arts=[];
-    if(m.cover) arts=[{src:m.cover, sizes:'512x512', type:'image/jpeg'}];
-    try{ navigator.mediaSession.metadata=new MediaMetadata({title:m.title||'', artist:m.artist||'', album:'雾中来信', artwork:arts}); }catch(e){}
+    var src=absHttps(m.cover), arts=msArtwork(src);
+    var title=m.title||'', artist=m.artist||'', album=msAlbum||MS_FALLBACK_ALBUM;
+    /* 切歌、封面迟到、换行都会走到这里；内容没变就不重复 new MediaMetadata，避免高频重复设置 */
+    var sig=title+'|'+artist+'|'+album+'|'+src;
+    if(sig===msSig){ syncPlaybackState(); return; }
+    msSig=sig;
+    try{
+      navigator.mediaSession.metadata=new MediaMetadata({title:title, artist:artist, album:album, artwork:arts});
+    }catch(e){}
+    syncPlaybackState();
+  }
+  /* 锁屏歌词：只在换行时改 album；没有歌词就恢复站名 */
+  function setMsLine(text){
+    var s=(text||'').replace(/\s+/g,' ').trim().slice(0,120);
+    var next=s||MS_FALLBACK_ALBUM;
+    if(next===msAlbum) return;
+    msAlbum=next; msSig=''; updateMS();
   }
   /* 下一首预热：用一个不发声的 Audio 把下一首音频提前拉进缓存，切歌秒开 */
   var warmAudio=null, warmUrl='';
@@ -822,14 +880,18 @@
   function renderLyrics(){
     var st=lyrState[curIdx];
     curLine=-1;
-    if(!st || st.status!=='done'){ lrcPanel.style.display='none'; lrcNote.style.display='none'; stageNote.style.display='none'; return; }
+    sweepLast={i:-1,p:-1};
+    if(!st || st.status!=='done'){
+      lrcPanel.style.display='none'; lrcNote.style.display='none'; stageNote.style.display='none';
+      setMsLine(''); return;
+    }
     if(!st.lines.length){
       lrcPanel.style.display='none';
       lrcNote.textContent=T('这首歌还没有歌词 · 纯享旋律');
       lrcNote.style.display='block';
       stageNote.style.display='flex';
       stageScroll.innerHTML='';
-      return;
+      setMsLine(''); return;
     }
     lrcNote.style.display='none'; stageNote.style.display='none';
     buildLines(lrcScroll, st.lines);
@@ -864,6 +926,10 @@
     while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
     if(idx===curLine && !force) return;
     curLine=idx;
+    /* 锁屏歌词只在换行时改一次 album，不跟着 100ms 扫光 tick 高频重建 metadata */
+    setMsLine(idx>=0 && st.lines[idx] ? T(st.lines[idx].text) : '');
+    /* 换行立刻给新的 .cur 写一次 --p，绕开节流，避免新行停在默认 0% 或沿用上一行的值 */
+    sweepTick(true);
     [lrcScroll, stageScroll].forEach(function(container){
       var li2=0;
       for(var i=0;i<container.children.length;i++){
@@ -879,26 +945,34 @@
     }
   }
   setInterval(function(){ syncLyrics(false); }, 200);
-  /* 歌词扫光进度：每 100ms 更新当前行点亮比例 --p（只写样式，不动播放链） */
+  /* 歌词扫光进度：每 100ms 更新当前行点亮比例 --p（只写样式，不动播放链）。
+     二分查找与 syncLyrics 用同一套 st.lines[mid].t<=t 判定，保证 .cur 与 --p 指向同一行。
+     force=true（换行/切歌）时必定写一次，绕开 0.6% 节流，避免新行停在默认 0% 或沿用旧值。 */
   var sweepLast={i:-1,p:-1};
-  function sweepTick(){
+  function sweepTick(force){
     if(!ap) return;
     var st=lyrState[curIdx]; if(!st || !st.lines || !st.lines.length) return;
     var t=ap.audio.currentTime||0, d=ap.audio.duration||0;
     var lo=0, hi=st.lines.length-1, idx=-1;
     while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
-    if(idx<0) return;
+    if(idx<0){
+      /* 前奏还没到第一句：当前行不点亮，清掉旧值 */
+      [lrcScroll, stageScroll].forEach(function(c){
+        var cur=c.querySelector('p.cur'); if(cur) cur.style.setProperty('--p','0%');
+      });
+      return;
+    }
     var start=st.lines[idx].t;
     var end=(idx+1<st.lines.length)?st.lines[idx+1].t:(d||start+5);
     if(end<=start) end=start+0.5;
     var pct=Math.max(0,Math.min(100,(t-start)/(end-start)*100));
-    if(idx===sweepLast.i && Math.abs(pct-sweepLast.p)<0.6) return;
+    if(!force && idx===sweepLast.i && Math.abs(pct-sweepLast.p)<0.6) return;
     sweepLast={i:idx,p:pct};
     [lrcScroll, stageScroll].forEach(function(c){
       var el=c.querySelectorAll('p')[idx]; if(el) el.style.setProperty('--p', pct.toFixed(1)+'%');
     });
   }
-  setInterval(sweepTick, 100);
+  setInterval(function(){ sweepTick(false); }, 100);
 
   /* ---------- 按作者分组的歌单（自建，替代播放器自带列表；新歌按文件名歌手自动归组） ---------- */
   var groupsEl=document.getElementById('groups');
@@ -1477,6 +1551,8 @@
       });
       ap.on('listswitch', function(e){
         curIdx=e.index; curLine=-1;
+        msSig=''; msAlbum=MS_FALLBACK_ALBUM;  /* 切歌先复位，别把上一首的歌词留在锁屏 */
+        updateMS();                           /* 先写标题/歌手；封面迟到时 applyCover 会再重建一次 */
         markGroupCurrent();
         expandGroupForSong(curIdx);
         stageTitle.textContent=T(songMeta[curIdx] ? (songMeta[curIdx].artist ? songMeta[curIdx].artist+' - ' : '')+songMeta[curIdx].title : '');
