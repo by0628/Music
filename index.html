@@ -1143,10 +1143,23 @@
 
   /* ---------------- playlist ---------------- */
   var mainSha=null; /* 已弃用：不再调 branches 取 sha，jsDelivr 只用 @main 线路（保留变量防旧引用报错） */
-  /* 歌单优先走 jsDelivr 的文件清单接口（CDN 侧、不限流）；
-     GitHub 接口有每小时 60 次的匿名限额、且共用出口 IP 时容易被别人耗尽，只作兜底 */
+  /* 站内清单 playlist.json 是主源：与页面同源（GitHub Pages 直发）、不限流、永远完整，
+     由仓库的 GitHub Action 在 songs/ 有变动时自动重建。
+     jsDelivr 的包清单在仓库超 50MB 后已被其停更（冻结在第一首歌），只能当最后兜底，绝不能缓存它的结果 */
+  function listViaManifest(){
+    return fetchT('playlist.json?ts='+Math.floor(Date.now()/60000), 9000)
+      .then(function(r){ if(!r.ok) throw new Error('manifest '+r.status); return r.json(); })
+      .then(function(d){
+        var names=[];
+        (d||[]).forEach(function(f){
+          if(f && f.name) names.push({name:f.name, size:f.size||0});
+        });
+        if(!names.length) throw new Error('empty');
+        return names;
+      });
+  }
   function listViaJsdelivr(){
-    return fetch('https://data.jsdelivr.com/v1/packages/gh/'+OWNER+'/'+REPO+'@main?structure=flat')
+    return fetchT('https://data.jsdelivr.com/v1/packages/gh/'+OWNER+'/'+REPO+'@main?structure=flat', 9000)
       .then(function(r){ if(!r.ok) throw new Error('jsd '+r.status); return r.json(); })
       .then(function(d){
         var names=[];
@@ -1161,8 +1174,9 @@
       });
   }
   function listViaGithub(){
-    /* 一次 trees 调用同时拿到文件名和大小；原来的 contents+branches 两次调用太费匿名限额（60 次/小时） */
-    return gh(API+'/git/trees/main?recursive=1')
+    /* 一次 trees 调用同时拿到文件名和大小；原来的 contents+branches 两次调用太费匿名限额（60 次/小时）。
+       带 9 秒超时：国内网络下 api.github.com 卡住时不能把整张歌单拖死 */
+    return fetchT(API+'/git/trees/main?recursive=1', 9000)
       .then(function(r){ if(!r.ok) throw new Error('tree '+r.status); return r.json(); })
       .then(function(d){
         var out=[], prefix=DIR+'/';
@@ -1175,32 +1189,37 @@
         return out;
       });
   }
-  /* 两边清单取并集：jsDelivr 不限流但索引更新慢（新歌要等它刷新）；
-     GitHub 实时但有匿名限额。并集让新歌立刻出现，GitHub 被限流时还有 jsDelivr 兜底 */
+  /* 三路清单取并集：站内 playlist.json（主源，完整不限流）+ GitHub trees（实时，刚传的新歌靠它立刻出现）
+     + jsDelivr（已被停更、只剩第一首歌，仅作前两路全挂时的最后兜底）。
+     关键规矩：只有主源或 GitHub 任一成功，结果才算「完整」才准写缓存；
+     只剩 jsDelivr 兜底的残缺歌单绝不缓存——旧版就是把一首歌的残缺结果写进缓存，才会一直只剩一首 */
   function settle(p){ return p.then(function(v){ return {ok:true, v:v}; }, function(){ return {ok:false}; }); }
   /* 歌单缓存：10 分钟内重复打开直接用缓存（0 次接口调用）；拉取失败/被限流时回退缓存渲染旧歌单，不让页面空着。
-     带 ?v= 的链接（自测新歌时用）强制绕过缓存拿最新清单 */
-  var LIST_KEY='unsentListV1';
+     带 ?v= 的链接（自测新歌时用）强制绕过缓存拿最新清单。
+     V2 换键：V1 可能已被旧逻辑用一首歌的残缺清单毒化，直接弃用 */
+  var LIST_KEY='unsentListV2';
   function readListCache(){
+    try{ localStorage.removeItem('unsentListV1'); }catch(e){}
     try{ var o=JSON.parse(localStorage.getItem(LIST_KEY)||'null');
       if(o && o.files && o.files.length) return o;
     }catch(e){}
     return null;
   }
   function fetchListUnion(){
-    return Promise.all([settle(listViaJsdelivr()), settle(listViaGithub())])
+    return Promise.all([settle(listViaManifest()), settle(listViaGithub()), settle(listViaJsdelivr())])
       .then(function(rs){
+        var complete = rs[0].ok || rs[1].ok;
         var seen={}, names=[];
         rs.forEach(function(r){
           if(!r.ok) return;
           (r.v||[]).forEach(function(it){
             if(!it || !it.name) return;
             if(!seen[it.name]){ seen[it.name]=it; names.push(it); }
-            else if(!seen[it.name].size && it.size) seen[it.name].size=it.size; /* 两路并集时把文件大小也带上，大文件分流要用 */
+            else if(!seen[it.name].size && it.size) seen[it.name].size=it.size; /* 并集时把文件大小也带上，大文件分流要用 */
           });
         });
         if(!names.length) throw new Error('no list');
-        try{ localStorage.setItem(LIST_KEY, JSON.stringify({t:Date.now(), files:names})); }catch(e){}
+        if(complete){ try{ localStorage.setItem(LIST_KEY, JSON.stringify({t:Date.now(), files:names})); }catch(e){} }
         return names;
       });
   }
