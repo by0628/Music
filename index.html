@@ -129,6 +129,21 @@
   .grp-row.on .no{color:var(--accent-d)}
   .grp-row .tt{flex:1;font-size:14.5px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .grp-row .dur{font-size:12px;color:var(--ink-faint);letter-spacing:.05em}
+  /* 歌单折叠与搜索 */
+  .grp-h{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .grp-h .rgt{display:flex;align-items:baseline}
+  .grp-h .chev{display:inline-block;font-size:11px;color:var(--ink-faint);margin-left:9px;transition:transform .3s}
+  .grp.folded .grp-h .chev{transform:rotate(-90deg)}
+  .grp.folded .grp-body{display:none}
+  .grp-tools{display:flex;gap:10px;align-items:center;padding:12px 4px 13px;border-bottom:1px solid var(--line)}
+  .grp-search{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--glass-brd);border-radius:999px;padding:7px 13px;background:var(--row-hover)}
+  .grp-search .s-ic{color:var(--ink-faint);font-size:15px;line-height:1}
+  .grp-search input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--ink);font-family:inherit;font-size:13.5px;letter-spacing:.06em}
+  .grp-search input::placeholder{color:var(--ink-faint)}
+  .grp-search .s-clear{background:none;border:none;color:var(--ink-faint);font-size:12px;cursor:pointer;padding:2px 4px;font-family:inherit}
+  .tool-btn{flex:none;background:transparent;border:1px solid var(--glass-brd);color:var(--ink-dim);border-radius:999px;padding:7px 13px;font-family:inherit;font-size:12px;letter-spacing:.18em;cursor:pointer;transition:all .3s}
+  .tool-btn:hover{color:var(--ink)}
+  .grp-none{padding:24px 10px 16px;text-align:center;color:var(--ink-faint);font-size:13px;letter-spacing:.25em}
   footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
 
   /* ---------- lyrics ---------- */
@@ -830,8 +845,68 @@
     var rows=groupsEl.querySelectorAll('.grp-row');
     for(var i=0;i<rows.length;i++) rows[i].classList.toggle('on', +rows[i].getAttribute('data-gi')===curIdx);
   }
+  /* 折叠状态（按歌手记、存本地）与搜索词：歌多了靠折叠收起、靠搜索直达 */
+  var foldState={}, foldLoaded=false, songQuery='';
+  function loadFold(){
+    if(foldLoaded) return; foldLoaded=true;
+    try{ var o=JSON.parse(localStorage.getItem('unsentFoldV1')||'null'); if(o && typeof o==='object') foldState=o; }catch(e){}
+  }
+  function saveFold(){ try{ localStorage.setItem('unsentFoldV1', JSON.stringify(foldState)); }catch(e){} }
+  function groupElOf(artist){
+    if(!groupsEl) return null;
+    var gs=groupsEl.querySelectorAll('.grp');
+    for(var i=0;i<gs.length;i++) if(gs[i].getAttribute('data-artist')===artist) return gs[i];
+    return null;
+  }
+  /* 切到一首歌时，自动展开它所在的组，别让正在放的歌藏在折叠里 */
+  function expandGroupForSong(i){
+    var m=songMeta[i]; if(!m) return;
+    var a=m.artist||'佚名';
+    if(foldState[a]){ foldState[a]=false; saveFold(); }
+    var g=groupElOf(a);
+    if(g && !songQuery) g.classList.remove('folded');
+    updateFoldBtn();
+  }
+  function updateFoldBtn(){
+    var btn=document.getElementById('foldAllBtn'); if(!btn) return;
+    var TT=function(s){ return window.T ? window.T(s) : s; };
+    var allFolded=true;
+    for(var k in foldState){ if(!foldState[k]){ allFolded=false; break; } }
+    btn.textContent=TT(allFolded ? '全部展开' : '全部折叠');
+  }
+  function applyFilter(){
+    if(!groupsEl) return;
+    var q=(songQuery||'').replace(/\s+/g,'').toLowerCase();
+    var anyVisible=false;
+    var gs=groupsEl.querySelectorAll('.grp');
+    for(var i=0;i<gs.length;i++){
+      var g=gs[i], a=g.getAttribute('data-artist'), j, rs;
+      if(!q){
+        g.style.display='';
+        g.classList.toggle('folded', !!foldState[a]);
+        rs=g.querySelectorAll('.grp-row');
+        for(j=0;j<rs.length;j++) rs[j].style.display='';
+        anyVisible=true;
+      }else{
+        var vis=0;
+        rs=g.querySelectorAll('.grp-row');
+        for(j=0;j<rs.length;j++){
+          var hit=(rs[j].getAttribute('data-q')||'').indexOf(q)>=0;
+          rs[j].style.display=hit?'':'none';
+          if(hit) vis++;
+        }
+        g.style.display=vis?'':'none';
+        g.classList.remove('folded'); /* 搜索时命中组强制展开，清空后恢复折叠状态 */
+        if(vis) anyVisible=true;
+      }
+    }
+    var none=document.getElementById('grpNone');
+    if(none) none.style.display=(q && !anyVisible)?'block':'none';
+    updateFoldBtn();
+  }
   function buildGroups(){
     if(!groupsEl || !songMeta.length) return;
+    loadFold();
     var TT=function(s){ return window.T ? window.T(s) : s; };
     var byArtist={}, order=[];
     songMeta.forEach(function(m,i){
@@ -840,26 +915,78 @@
       byArtist[a].push(i);
     });
     order.sort(function(x,y){ return byArtist[y].length-byArtist[x].length || x.localeCompare(y,'zh-Hans-CN'); });
-    groupsEl.innerHTML='';
+    /* 首次出现的组默认折叠，只展开正在放的那一组，歌单再长也不占满屏 */
     order.forEach(function(a){
+      if(!(a in foldState)) foldState[a]=byArtist[a].indexOf(curIdx)<0;
+    });
+    groupsEl.innerHTML='';
+    /* 工具行：搜索框 + 全部折叠/展开 */
+    var tools=document.createElement('div'); tools.className='grp-tools';
+    var sw=document.createElement('div'); sw.className='grp-search';
+    var ic=document.createElement('span'); ic.className='s-ic'; ic.textContent='⌕';
+    var inp=document.createElement('input'); inp.type='text'; inp.id='songSearch';
+    inp.setAttribute('placeholder', TT('搜索歌曲或歌手')); inp.setAttribute('autocomplete','off');
+    inp.value=songQuery;
+    var clr=document.createElement('button'); clr.className='s-clear'; clr.textContent='✕';
+    clr.style.display=songQuery?'':'none';
+    sw.appendChild(ic); sw.appendChild(inp); sw.appendChild(clr);
+    var fab=document.createElement('button'); fab.className='tool-btn'; fab.id='foldAllBtn';
+    tools.appendChild(sw); tools.appendChild(fab);
+    groupsEl.appendChild(tools);
+    inp.addEventListener('input', function(){
+      songQuery=inp.value;
+      clr.style.display=songQuery?'':'none';
+      applyFilter();
+    });
+    clr.addEventListener('click', function(){
+      songQuery=''; inp.value=''; clr.style.display='none'; applyFilter(); inp.focus();
+    });
+    fab.addEventListener('click', function(){
+      var anyOpen=false;
+      order.forEach(function(a){ if(!foldState[a]) anyOpen=true; });
+      order.forEach(function(a){ foldState[a]=anyOpen; });
+      saveFold(); applyFilter();
+    });
+    order.forEach(function(a){
+      var g=document.createElement('div'); g.className='grp'+(foldState[a]?' folded':'');
+      g.setAttribute('data-artist', a);
       var h=document.createElement('div'); h.className='grp-h';
       var nm=document.createElement('span'); nm.className='nm'; nm.textContent=TT(a);
+      var rgt=document.createElement('span'); rgt.className='rgt';
       var cnt=document.createElement('span'); cnt.className='cnt'; cnt.textContent=byArtist[a].length+' 首';
-      h.appendChild(nm); h.appendChild(cnt);
-      groupsEl.appendChild(h);
+      var chv=document.createElement('span'); chv.className='chev'; chv.textContent='▾';
+      rgt.appendChild(cnt); rgt.appendChild(chv);
+      h.appendChild(nm); h.appendChild(rgt);
+      h.addEventListener('click', function(){
+        if(songQuery) return; /* 搜索中不改折叠，清空搜索后自动恢复 */
+        foldState[a]=!foldState[a];
+        saveFold();
+        g.classList.toggle('folded', !!foldState[a]);
+        updateFoldBtn();
+      });
+      g.appendChild(h);
+      var body=document.createElement('div'); body.className='grp-body';
       byArtist[a].forEach(function(gi,n){
         var r=document.createElement('div'); r.className='grp-row'; r.setAttribute('data-gi',gi);
+        var rawQ=(songMeta[gi].artist||'')+' '+(songMeta[gi].title||'');
+        r.setAttribute('data-q', (rawQ+' '+TT(rawQ)).replace(/\s+/g,'').toLowerCase());
         var no=document.createElement('span'); no.className='no'; no.textContent=('0'+(n+1)).slice(-2);
         var tt=document.createElement('span'); tt.className='tt'; tt.textContent=TT(songMeta[gi].title);
         var du=document.createElement('span'); du.className='dur'; du.textContent=fmtDur(durations[gi]);
         r.appendChild(no); r.appendChild(tt); r.appendChild(du);
         r.addEventListener('click', function(){ if(ap){ ap.list.switch(gi); ap.play(); } });
-        groupsEl.appendChild(r);
+        body.appendChild(r);
       });
+      g.appendChild(body);
+      groupsEl.appendChild(g);
     });
+    var none=document.createElement('div'); none.className='grp-none'; none.id='grpNone';
+    none.textContent=TT('没有找到这首歌'); none.style.display='none';
+    groupsEl.appendChild(none);
     groupsEl.style.display='block';
     statusEl.textContent=TT('共 '+songMeta.length+' 首 · '+order.length+' 位作者 · 已按作者分好组');
     markGroupCurrent();
+    applyFilter();
   }
   window.buildGroups=buildGroups;
 
@@ -1284,6 +1411,7 @@
       ap.on('listswitch', function(e){
         curIdx=e.index; curLine=-1;
         markGroupCurrent();
+        expandGroupForSong(curIdx);
         stageTitle.textContent=T(songMeta[curIdx] ? (songMeta[curIdx].artist ? songMeta[curIdx].artist+' - ' : '')+songMeta[curIdx].title : '');
         if(window.refreshLangDOM) window.refreshLangDOM();
         renderLyrics();
