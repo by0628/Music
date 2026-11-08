@@ -1344,7 +1344,10 @@
   /* 浏览器标签页标题跟随当前歌曲；切歌与简繁切换都会重算 */
   function updateDocTitle(){
     try{
-      var t=stageTitle.textContent ? stageTitle.textContent.replace(/\s+/g,' ').trim() : '';
+      var ti='', au='';
+      var tEl=document.querySelector('.aplayer-title'); if(tEl) ti=tEl.textContent.replace(/\s+/g,' ').trim();
+      var aEl=document.querySelector('.aplayer-author'); if(aEl) au=aEl.textContent.replace(/\s+/g,' ').trim();
+      var t = ti ? ((au ? au+' - ' : '')+ti) : (stageTitle.textContent ? stageTitle.textContent.replace(/\s+/g,' ').trim() : '');
       document.title = t ? (t+' · 雾中来信') : '雾中来信';
     }catch(e){}
   }
@@ -2138,6 +2141,7 @@
       loadCover(0, false);
       applyStageBg();
       vinylize();
+      ap.audio.addEventListener('loadedmetadata', function(){ if(window.updateDocTitle) window.updateDocTitle(); });
       ap.on('play', function(){
         document.body.classList.add('playing');
         if('mediaSession' in navigator) try{ navigator.mediaSession.playbackState='playing'; }catch(e){}
