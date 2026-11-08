@@ -460,8 +460,8 @@
 <body>
 <div id="ambient"><div class="amb-layer" id="ambA"></div><div class="amb-layer" id="ambB"></div></div>
 <div class="grain"></div>
-<div id="setShield" aria-hidden="true"></div>
 <main>
+  <div id="setShield" aria-hidden="true"></div>
   <div class="kicker">by0628 · songs</div>
   <h1>雾中来信</h1>
   <p class="sub">一些在深夜里写下的歌。<br>不赶时间，慢慢听。</p>
@@ -675,20 +675,23 @@
     return fetch('https://api.lyrics.ovh/v1/'+encodeURIComponent(artist)+'/'+encodeURIComponent(title))
       .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(d){
-        var txt=(d && d.lyrics)||'';
-        var ls=txt.split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean);
-        if(ls.length<4) return null;
-        var total=dur || ls.length*4.5;
-        return ls.map(function(s,i){ return {t: total*i/ls.length, text:s}; });
+        return plainToLines((d && d.lyrics)||'', dur);
       })
       .catch(function(){ return null; });
   }
   /* 无时间轴的纯文本歌词：按时长均分行时间粗对齐（有总比没有强） */
+  /* 无轴纯文本粗对齐：把歌词铺进「前奏之后、尾奏之前」的区间。
+     旧做法从 0 秒起把整首时长均分给歌词行，开头恒定领先 2~3 行（《唤水剑》即此类）；
+     没有真同步轴时只能是估算，但至少不能把前奏算进歌词里。 */
   function plainToLines(txt, dur){
-    var ls=(txt||'').split(/\r?\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+    var ls=(txt||'').split(/\r?\n/).map(function(s){ return s.trim(); })
+      .filter(function(s){ return s && !/^\[[^\]]*\]$/.test(s)
+        && !/^(词|曲|编曲|制作人|演唱|作词|作曲|混音|和声)\s*[:：]/.test(s); });
     if(ls.length<4) return null;
-    var total=dur || ls.length*4.5;
-    return ls.map(function(s,i){ return {t: total*i/ls.length, text:s}; });
+    var D=(dur && isFinite(dur) && dur>0) ? dur : ls.length*4.5;
+    var intro=Math.min(D*0.06, 10), outro=Math.min(D*0.05, 8);
+    var span=Math.max(1, D-intro-outro);
+    return ls.map(function(s,i){ return {t: intro + span*i/Math.max(1,ls.length-1), text:s}; });
   }
   /* LRCLIB 纯文本兜底：有些歌只有 plainLyrics 没有同步轴（例：《唤水剑》），也捞回来用 */
   function lrclibPlain(artist, title, dur){
@@ -779,12 +782,12 @@
         if(dur){
           var inWin=res.filter(function(x){ return Math.abs((x.trackTimeMillis||0)/1000-dur)<=4; });
           if(!inWin.length) return null;
-          pick=inWin.filter(function(x){ return norm(x.trackName)===norm(meta.title) && norm(x.artistName)===norm(meta.artist); })[0]
-            || inWin.filter(function(x){ return norm(x.trackName)===norm(meta.title); })[0]
+          pick=inWin.filter(function(x){ return norm(cleanTitle(x.trackName))===norm(cleanTitle(meta.title)) && norm(x.artistName)===norm(meta.artist); })[0]
+            || inWin.filter(function(x){ return norm(cleanTitle(x.trackName))===norm(cleanTitle(meta.title)); })[0]
             || inWin.filter(function(x){ return norm(x.artistName)===norm(meta.artist); })[0]
             || inWin[0];
         }else{
-          pick=res.filter(function(x){ return norm(x.trackName)===norm(meta.title) && norm(x.artistName)===norm(meta.artist); })[0]||null;
+          pick=res.filter(function(x){ return norm(cleanTitle(x.trackName))===norm(cleanTitle(meta.title)) && norm(x.artistName)===norm(meta.artist); })[0]||null;
         }
         return pick ? pick.artworkUrl100.replace('100x100bb.jpg','600x600bb.jpg') : null;
       });
@@ -961,7 +964,7 @@
       var list=(d && d.data && d.data.song && d.data.song.list)||[];
       var scored=list.filter(function(x){ return x.albummid; }).map(function(x, i){
         var s=0;
-        if(norm(x.songname||'')===norm(meta.title)) s+=4;
+        if(norm(cleanTitle(x.songname||''))===norm(cleanTitle(meta.title))) s+=4;
         var singers=(x.singer||[]).map(function(sg){ return sg.name||''; }).join(' ');
         if(meta.artist && norm(meta.artist)){
           if(norm(singers)===norm(meta.artist)) s+=3;
@@ -1033,7 +1036,15 @@
     var meta=songMeta[idx], dur=withDur ? durations[idx] : null;
     var covCached=null;
     try{ covCached=localStorage.getItem('unsentCovV1:'+(meta.artist||'')+'|'+meta.title); }catch(e){}
-    if(covCached){ st.done=true; applyCover(idx, covCached); return; }
+    if(covCached){
+      /* 缓存里的第三方图片 URL 可能已失效：先验图，挂了就清掉重查，不让一次缓存定终身 */
+      return verifyImgUrls([covCached], 0).then(function(ok){
+        if(ok){ st.done=true; applyCover(idx, ok); return; }
+        try{ localStorage.removeItem('unsentCovV1:'+(meta.artist||'')+'|'+meta.title); }catch(e){}
+        st.done=false; st.triedDur=false; st.triedNoDur=false;
+        return loadCover(idx, withDur);
+      });
+    }
     qqCover(meta, dur)
       .then(function(url){ return url || itunesCover(meta, dur).catch(function(){ return null; }); })
       .then(function(url){ return url || mbCover(meta, dur); })
