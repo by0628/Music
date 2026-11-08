@@ -217,7 +217,6 @@
   /* 封面倒影：向下渐隐，纯 CSS；不支持的浏览器自然无效果，也不额外留白 */
   @supports (-webkit-box-reflect: below 1px linear-gradient(transparent,transparent)){
     .aplayer .aplayer-pic{-webkit-box-reflect:below 8px linear-gradient(to bottom,rgba(58,65,71,.30),transparent 34%)}
-    .aplayer .aplayer-info{margin-top:78px!important}
   }
   /* 两层封面交叉淡入：新层在旧层淡出到一半时才开始淡入（重叠 50%），绝不硬切 */
   .aplayer .aplayer-pic .pic-rot{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;
@@ -358,16 +357,16 @@
   .mist-out{animation:mistOut var(--t-exit) var(--ease-out) both}
 
   /* 每日一首：一张克制的小卡，不是横幅 */
-  #dailyCard{display:block;margin:22px auto 0;padding:11px 24px;background:var(--card);
+  #dailyCard{display:flex;align-items:baseline;gap:14px;width:fit-content;max-width:100%;margin:14px auto 0;padding:8px 20px;background:var(--card);
     backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);
-    border:1px solid var(--glass-brd);border-radius:18px;color:var(--ink-dim);font-family:inherit;
+    border:1px solid var(--glass-brd);border-radius:999px;color:var(--ink-dim);font-family:inherit;
     box-shadow:inset 0 1px 0 var(--glass-hi);cursor:pointer;
     animation:mistIn var(--t-enter) var(--ease-in) 280ms both;
     transition:color var(--t-micro) var(--ease-in),border-color var(--t-micro) var(--ease-in),transform var(--t-micro) var(--ease-in)}
   #dailyCard:hover{color:var(--ink)}
   #dailyCard:disabled{opacity:.55;cursor:default}
-  #dailyCard .dk{display:block;font-size:10px;letter-spacing:.42em;color:var(--ink-faint);margin-bottom:7px}
-  #dailyCard .dv{display:block;font-size:13px;letter-spacing:.16em;line-height:1.6}
+  #dailyCard .dk{display:inline;font-size:10px;letter-spacing:.42em;color:var(--ink-faint);white-space:nowrap}
+  #dailyCard .dv{display:inline;font-size:12.5px;letter-spacing:.14em;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   /* 文字按钮：分享图 */
   .txt-btn{display:block;margin:14px auto 0;background:none;border:none;color:var(--ink-faint);
@@ -463,7 +462,6 @@
   <div class="kicker">by0628 · songs</div>
   <h1>雾中来信</h1>
   <p class="sub">一些在深夜里写下的歌。<br>不赶时间，慢慢听。</p>
-  <button id="dailyCard" type="button" disabled><span class="dk">今晚这首</span><span class="dv">—</span></button>
   <div id="ctlWrap">
     <button id="setBtn" aria-haspopup="true" aria-expanded="false">版面設定<span id="setBtnSum"></span> ▾</button>
     <div id="setPanel">
@@ -515,6 +513,7 @@
   </div>
   <div class="rule"></div>
   <div id="player"></div>
+  <button id="dailyCard" type="button" disabled><span class="dk">今晚这首</span><span class="dv">—</span></button>
   <button id="shareBtn" class="txt-btn" type="button">分 享 图</button>
   <div id="skeleton" aria-hidden="true">
     <div class="sk-row"></div><div class="sk-row"></div><div class="sk-row"></div>
