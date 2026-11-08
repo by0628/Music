@@ -728,7 +728,12 @@
     st.status='loading';
     var meta=songMeta[idx], dur=durations[idx];
     var jobs=[];
-    if(meta.lrcFile) jobs.push(fetchText(sourcesFor(encodeURIComponent(meta.lrcFile))).then(parseLrc));
+    if(meta.lrcFile){
+      /* 歌词换版时字节数会变：拉取地址带 ?v=尺寸，绕开 CDN 与浏览器对旧 .lrc 的长缓存 */
+      var lrcSrcs=sourcesFor(encodeURIComponent(meta.lrcFile));
+      if(meta.lrcSize) lrcSrcs=lrcSrcs.map(function(u){ return u+'?v='+meta.lrcSize; });
+      jobs.push(fetchText(lrcSrcs).then(parseLrc));
+    }
     jobs.push(Promise.resolve(lrcCacheGet(meta)));
     jobs.push(
       lrclibGet(meta.artist, meta.title, dur)
@@ -2020,11 +2025,11 @@
   }
   listPromise
     .then(function(files){
-      var covers={}, lrcFiles={};
+      var covers={}, lrcFiles={}, lrcSizes={};
       files.forEach(function(f){
         var e=ext(f.name);
         if(IMG.indexOf(e)>=0) covers[base(f.name)]=CDN+encodeURIComponent(f.name);
-        if(e==='lrc') lrcFiles[base(f.name)]=f.name;
+        if(e==='lrc'){ lrcFiles[base(f.name)]=f.name; lrcSizes[base(f.name)]=f.size||0; }
       });
       var songs=files.filter(function(f){return AUDIO.indexOf(ext(f.name))>=0;})
         .sort(function(a,b){return a.name.localeCompare(b.name,'zh');})
@@ -2032,7 +2037,7 @@
           var b=base(f.name), nm=splitName(b);
           var srcs=sourcesFor(encodeURIComponent(f.name), (f.size||0) >= 20*1024*1024);
           songSources.push(srcs);
-          songMeta.push({artist:nm.artist, title:nm.title, file:b, lrcFile:lrcFiles[b]||null, cover:covers[b]||null});
+          songMeta.push({artist:nm.artist, title:nm.title, file:b, lrcFile:lrcFiles[b]||null, lrcSize:lrcSizes[b]||0, cover:covers[b]||null});
           lyrState.push({status:'idle', lines:null});
           coverState.push({done:!!covers[b], triedNoDur:false, triedDur:false});
           var s={name:nm.title, artist:nm.artist||'by0628', url:srcs[0]};
