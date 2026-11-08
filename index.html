@@ -2129,7 +2129,9 @@
       refreshFavGroup();
       preloadAll();
       warmNext();
-      var initMeta=songMeta[curIdx]||songMeta[0];  /* initPlayMemory 已把 curIdx 切到记忆恢复的歌，别再写死第 0 首 */
+      var idx0=(ap&&ap.list&&typeof ap.list.index==='number')?ap.list.index:curIdx;  /* 暂停态下 list.switch 不触发 listswitch 事件，curIdx 还停在 0；以播放器自己的当前序号为准 */
+      curIdx=idx0;
+      var initMeta=songMeta[idx0]||songMeta[0];
       stageTitle.textContent=T((initMeta.artist ? initMeta.artist+' - ' : '')+initMeta.title);
       updateDocTitle();
       stageBtn.style.display='block';
