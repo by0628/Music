@@ -1341,6 +1341,15 @@
   }
   window.buildGroups=buildGroups;
 
+  /* 浏览器标签页标题跟随当前歌曲；切歌与简繁切换都会重算 */
+  function updateDocTitle(){
+    try{
+      var t=stageTitle.textContent ? stageTitle.textContent.replace(/\s+/g,' ').trim() : '';
+      document.title = t ? (t+' · 雾中来信') : '雾中来信';
+    }catch(e){}
+  }
+  window.updateDocTitle=updateDocTitle;
+
   /* ---------- 进站预加载：把所有歌的时长/封面/歌词在后台错峰拉好，切歌秒开 ---------- */
   function preloadOne(i){
     if(durations[i]){ loadCover(i, true); loadLyrics(i); return; }
@@ -1525,6 +1534,7 @@
           var aEl=document.querySelector('.aplayer-author'); if(aEl) aEl.textContent=T(cur.artist||'');
           var stEl=document.getElementById('stageTitle');
           if(stEl) stEl.textContent=T((cur.artist ? cur.artist+' - ' : '')+cur.title);
+          if(window.updateDocTitle) window.updateDocTitle();
         }
       }catch(e){}
     }
@@ -2095,6 +2105,7 @@
         expandGroupForSong(curIdx);
         stageTitle.textContent=T(songMeta[curIdx] ? (songMeta[curIdx].artist ? songMeta[curIdx].artist+' - ' : '')+songMeta[curIdx].title : '');
         if(window.refreshLangDOM) window.refreshLangDOM();
+        updateDocTitle();
         renderLyrics();
         loadLyrics(curIdx);
         if(coverState[curIdx] && !coverState[curIdx].done && !(songMeta[curIdx] && songMeta[curIdx].cover)){
@@ -2119,6 +2130,7 @@
       preloadAll();
       warmNext();
       stageTitle.textContent=T((songMeta[0].artist ? songMeta[0].artist+' - ' : '')+songMeta[0].title);
+      updateDocTitle();
       stageBtn.style.display='block';
       loadCover(0, false);
       applyStageBg();
