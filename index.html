@@ -126,21 +126,23 @@
   /* 按作者分组的自建歌单（替代播放器自带列表） */
   .aplayer .aplayer-list{display:none!important}
   .aplayer .aplayer-icon-menu{display:none!important}
-  #groups{position:relative;z-index:2;margin:18px auto 0;padding:8px 14px 14px;
+  #groups{position:relative;z-index:2;margin:18px auto 0;padding:6px 12px 10px;
     background:var(--card);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);
-    border:1px solid var(--glass-brd);border-radius:26px;box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi)}
+    border:1px solid var(--glass-brd);border-radius:26px;box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi);
+    max-height:52vh;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+  #groups::-webkit-scrollbar{width:0;height:0}
   .grp-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
-    padding:15px 8px 9px;border-bottom:1px solid var(--line)}
-  .grp-h .nm{font-size:15px;letter-spacing:.22em;color:var(--ink)}
-  .grp-h .cnt{font-size:11px;letter-spacing:.18em;color:var(--ink-faint)}
-  .grp-row{display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:12px;cursor:pointer;
+    padding:10px 6px 6px;border-bottom:1px solid var(--line)}
+  .grp-h .nm{font-size:12.5px;letter-spacing:.16em;color:var(--ink-dim)}
+  .grp-h .cnt{font-size:10.5px;letter-spacing:.14em;color:var(--ink-faint)}
+  .grp-row{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;cursor:pointer;
     color:var(--ink-dim);transition:background var(--t-micro) var(--ease-in),color var(--t-micro) var(--ease-in),transform var(--t-micro) var(--ease-in)}
   .grp-row:hover{background:var(--row-hover)}
   .grp-row.on{background:var(--row-on);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
-  .grp-row .no{font-size:11px;color:var(--ink-faint);min-width:20px;text-align:right;letter-spacing:.05em}
+  .grp-row .no{font-size:10.5px;color:var(--ink-faint);min-width:16px;text-align:right;letter-spacing:.05em}
   .grp-row.on .no{color:var(--accent-d)}
-  .grp-row .tt{flex:1;font-size:14.5px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .grp-row .dur{font-size:12px;color:var(--ink-faint);letter-spacing:.05em}
+  .grp-row .tt{flex:1;font-size:13.5px;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .grp-row .dur{font-size:11.5px;color:var(--ink-faint);letter-spacing:.05em}
   /* 歌单折叠与搜索 */
   .grp-h{cursor:pointer;-webkit-tap-highlight-color:transparent}
   .grp-h .rgt{display:flex;align-items:baseline}
@@ -152,13 +154,13 @@
     transition:grid-template-rows var(--t-enter) var(--ease-in),opacity var(--t-exit) var(--ease-out)}
   .grp.folded .grp-body{grid-template-rows:0fr;opacity:0}
   .grp-inner{overflow:hidden;min-height:0}
-  .grp-tools{display:flex;gap:10px;align-items:center;padding:12px 4px 13px;border-bottom:1px solid var(--line)}
-  .grp-search{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--glass-brd);border-radius:999px;padding:7px 13px;background:var(--row-hover)}
-  .grp-search .s-ic{color:var(--ink-faint);font-size:15px;line-height:1}
-  .grp-search input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--ink);font-family:inherit;font-size:13.5px;letter-spacing:.06em}
+  .grp-tools{display:flex;gap:10px;align-items:center;padding:8px 2px 9px;border-bottom:1px solid var(--line)}
+  .grp-search{flex:1;display:flex;align-items:center;gap:8px;border:1px solid var(--glass-brd);border-radius:999px;padding:5px 11px;background:var(--row-hover)}
+  .grp-search .s-ic{color:var(--ink-faint);font-size:13px;line-height:1}
+  .grp-search input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--ink);font-family:inherit;font-size:13px;letter-spacing:.06em}
   .grp-search input::placeholder{color:var(--ink-faint)}
   .grp-search .s-clear{background:none;border:none;color:var(--ink-faint);font-size:12px;cursor:pointer;padding:2px 4px;font-family:inherit}
-  .tool-btn{flex:none;background:transparent;border:1px solid var(--glass-brd);color:var(--ink-dim);border-radius:999px;padding:7px 13px;font-family:inherit;font-size:12px;letter-spacing:.18em;cursor:pointer;
+  .tool-btn{flex:none;background:transparent;border:1px solid var(--glass-brd);color:var(--ink-dim);border-radius:999px;padding:5px 11px;font-family:inherit;font-size:12px;letter-spacing:.18em;cursor:pointer;
     transition:color var(--t-micro) var(--ease-in),border-color var(--t-micro) var(--ease-in),transform var(--t-micro) var(--ease-in)}
   .tool-btn:hover{color:var(--ink)}
   .grp-none{padding:24px 10px 16px;text-align:center;color:var(--ink-faint);font-size:13px;letter-spacing:.25em}
