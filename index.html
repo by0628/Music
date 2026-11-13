@@ -1147,6 +1147,38 @@
     var origLoad=loadLyrics;
     loadLyrics=function(i){ origLoad(i); loadWords(i); };
   })();
+  /* ---------------- 歌词兜底：直连落空时经 Worker /lrc 代查 ----------------
+     音源点播的歌没有本地 .lrc 垫底，lrclib.net 直连在国内网络又常失败；
+     直连链跑完仍没歌词（或 16 秒还没跑完）就向 Worker 要一份，命中写进同一份歌词缓存。 */
+  var LRC_API=WORD_API.replace(/\/lyric$/, '/lrc');
+  var lrcFbTried={};
+  function workerLyrics(i){
+    var m=songMeta[i]; if(!m) return;
+    var st=lyrState[i]; if(!st || (st.lines && st.lines.length)) return;
+    var dur=durations[i]||0;
+    fetchT(LRC_API+'?title='+encodeURIComponent(m.title)+'&artist='+encodeURIComponent(m.artist||'')+(dur?'&duration='+Math.round(dur):''), 15000)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d || !d.ok || !d.lines || !d.lines.length) return;
+        var st2=lyrState[i]; if(!st2 || (st2.lines && st2.lines.length)) return;
+        var lines=[];
+        d.lines.forEach(function(l){ var tx=String(l.text||''); if(tx) lines.push({t:+l.t||0, text:tx}); });
+        if(!lines.length) return;
+        st2.lines=lines; st2.status='done';
+        try{ lrcCacheSet(m, lines); }catch(e){}
+        if(i===curIdx) renderLyrics();
+      })
+      .catch(function(){});
+  }
+  (function(){
+    var prevLoad=loadLyrics;
+    loadLyrics=function(i){
+      prevLoad(i);
+      if(lrcFbTried[i]) return; lrcFbTried[i]=1;
+      setTimeout(function(){ workerLyrics(i); }, 5000);
+      setTimeout(function(){ workerLyrics(i); }, 16000);
+    };
+  })();
 
   /* ---------------- lyrics engine ---------------- */
   /* 歌词时间对齐：同一首歌不同版本的音频前奏长短不一，歌词常整首差几秒。
@@ -1313,7 +1345,7 @@
     jobs.push(ovhLyrics(meta.artist, meta.title, dur));
     var approxStart=jobs.length-2; /* 最后两档是粗对齐兜底，命中的不进缓存，留机会给精准同步版 */
     (function next(j){
-      if(j>=jobs.length){ st.status='done'; st.lines=[]; renderLyrics(); return; }
+      if(j>=jobs.length){ st.status='done'; if(!st.lines) st.lines=[]; renderLyrics(); return; }
       jobs[j].then(function(lines){
         if(lines && lines.length){
           st.status='done'; st.lines=lines;
