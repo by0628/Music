@@ -164,6 +164,15 @@
     transition:color var(--t-micro) var(--ease-in),border-color var(--t-micro) var(--ease-in),transform var(--t-micro) var(--ease-in)}
   .tool-btn:hover{color:var(--ink)}
   .grp-none{padding:24px 10px 16px;text-align:center;color:var(--ink-faint);font-size:13px;letter-spacing:.25em}
+  /* 在线点歌 */
+  #onlineBox{margin-top:14px;border:1px solid var(--glass-brd);border-radius:14px;padding:10px 12px 9px;background:var(--row-hover)}
+  #onlineBox .ob-t{font-size:12px;color:var(--ink-dim);letter-spacing:.22em;margin:1px 0 8px}
+  #onlineBox .ob-r{display:flex;gap:8px}
+  #onlineBox input{flex:1;min-width:0;background:transparent;border:1px solid var(--glass-brd);border-radius:999px;padding:6px 12px;color:var(--ink);font-family:inherit;font-size:13px;letter-spacing:.05em;outline:none}
+  #onlineBox input::placeholder{color:var(--ink-faint)}
+  #onlineBox button{flex:none;background:transparent;border:1px solid var(--glass-brd);color:var(--ink-dim);border-radius:999px;padding:6px 14px;font-family:inherit;font-size:12.5px;letter-spacing:.18em;cursor:pointer}
+  #onlineBox button:disabled{opacity:.55;cursor:default}
+  #obMsg{font-size:12px;color:var(--ink-faint);letter-spacing:.06em;padding:7px 2px 1px;min-height:15px}
   footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
 
   /* ---------- lyrics ---------- */
@@ -526,6 +535,15 @@
     <div id="skeletonMsg"></div>
   </div>
   <div id="groups" style="display:none"></div>
+  <div id="onlineBox">
+    <div class="ob-t">在 线 点 歌 · 库 里 没 有 的 歌</div>
+    <div class="ob-r">
+      <input id="obTitle" type="text" placeholder="歌名" autocomplete="off">
+      <input id="obArtist" type="text" placeholder="歌手（可空）" autocomplete="off">
+      <button id="obGo" type="button">点歌</button>
+    </div>
+    <div id="obMsg"></div>
+  </div>
   <div id="lrcPanel"><div id="lrcScroll"></div></div>
   <div id="lrcNote"></div>
   <button id="stageBtn">全 屏 歌 词</button>
@@ -654,6 +672,59 @@
     srcState[i]={st:'pending', p:p};
     return p;
   }
+
+  /* ---------------- 在线点歌：库里没有的歌，向音源现取现播 ---------------- */
+  (function(){
+    var box=document.getElementById('onlineBox'); if(!box) return;
+    var tIn=document.getElementById('obTitle'), aIn=document.getElementById('obArtist'),
+        go=document.getElementById('obGo'), msg=document.getElementById('obMsg');
+    var TT=function(s){ return window.T ? window.T(s) : s; };
+    var libN=-1; /* 库内歌曲数，第一次点歌时定格；之后的都是点歌曲目 */
+    function say(s){ msg.textContent=TT(s); }
+    function busy(b){ go.disabled=b; go.textContent=TT(b?'取链中…':'点歌'); }
+    say('填歌名点「点歌」，从音源现取现播；歌词、封面会自动配。');
+    function playRemote(){
+      var title=(tIn.value||'').trim(), artist=(aIn.value||'').trim();
+      if(!title){ say('先填歌名'); tIn.focus(); return; }
+      if(typeof ap==='undefined' || !ap || !ap.list){ say('播放器还没就绪，等歌单加载完再试'); return; }
+      if(libN<0) libN=ap.list.audios.length;
+      busy(true); say('正在向音源找《'+title+'》，最慢十几秒…');
+      var ctl=('AbortController' in window)?new AbortController():null;
+      var to=setTimeout(function(){ if(ctl) ctl.abort(); }, 20000);
+      fetch(SRC_API+'?title='+encodeURIComponent(title)+'&artist='+encodeURIComponent(artist), ctl?{signal:ctl.signal}:{})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        clearTimeout(to); busy(false);
+        if(!d || !d.ok || !d.url){ say('音源没找到这首：换个歌名，或把歌手也填上再试'); return; }
+        var ti=title, ar=artist;
+        if(!ar && d.matched && d.matched.indexOf(' - ')>0) ar=d.matched.slice(d.matched.indexOf(' - ')+3);
+        var found=-1;
+        for(var i=0;i<songMeta.length;i++){
+          if(songMeta[i].title===ti && (songMeta[i].artist||'')===ar){ found=i; break; }
+        }
+        if(found>=0 && found<libN){ ap.list.switch(found); ap.play(); say('库里就有这首，已经切过去播了'); return; }
+        if(found>=libN){ /* 点过的歌地址可能过期：换新地址再播 */
+          songSources[found]=[d.url]; srcState[found]={st:'ok', url:d.url};
+          ap.list.audios[found].url=d.url;
+          ap.list.switch(found); ap.play();
+          say('已重新取链：'+ti+(ar?' - '+ar:''));
+          return;
+        }
+        var idx=ap.list.audios.length;
+        songMeta.push({artist:ar, title:ti, file:null, lrcFile:null, lrcSize:0, cover:null});
+        songSources.push([d.url]);
+        lyrState.push({status:'idle', lines:null});
+        coverState.push({done:false, triedNoDur:false, triedDur:false});
+        srcState.push({st:'ok', url:d.url});
+        ap.list.add([{name:ti, artist:ar||'音源', url:d.url}]);
+        ap.list.switch(idx); ap.play();
+        say('已点上：'+ti+(ar?' - '+ar:'')+'（音源直连）');
+      })
+      .catch(function(){ clearTimeout(to); busy(false); say('取链超时或网络不通，稍等再试一次'); });
+    }
+    go.addEventListener('click', playRemote);
+    [tIn, aIn].forEach(function(el){ el.addEventListener('keydown', function(e){ if(e.key==='Enter') playRemote(); }); });
+  })();
 
   /* ---------------- lyrics engine ---------------- */
   function parseLrc(text){
