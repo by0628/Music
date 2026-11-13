@@ -164,15 +164,6 @@
     transition:color var(--t-micro) var(--ease-in),border-color var(--t-micro) var(--ease-in),transform var(--t-micro) var(--ease-in)}
   .tool-btn:hover{color:var(--ink)}
   .grp-none{padding:24px 10px 16px;text-align:center;color:var(--ink-faint);font-size:13px;letter-spacing:.25em}
-  /* 在线点歌 */
-  #onlineBox{margin-top:14px;border:1px solid var(--glass-brd);border-radius:14px;padding:10px 12px 9px;background:var(--row-hover)}
-  #onlineBox .ob-t{font-size:12px;color:var(--ink-dim);letter-spacing:.22em;margin:1px 0 8px}
-  #onlineBox .ob-r{display:flex;gap:8px}
-  #onlineBox input{flex:1;min-width:0;background:transparent;border:1px solid var(--glass-brd);border-radius:999px;padding:6px 12px;color:var(--ink);font-family:inherit;font-size:13px;letter-spacing:.05em;outline:none}
-  #onlineBox input::placeholder{color:var(--ink-faint)}
-  #onlineBox button{flex:none;background:transparent;border:1px solid var(--glass-brd);color:var(--ink-dim);border-radius:999px;padding:6px 14px;font-family:inherit;font-size:12.5px;letter-spacing:.18em;cursor:pointer}
-  #onlineBox button:disabled{opacity:.55;cursor:default}
-  #obMsg{font-size:12px;color:var(--ink-faint);letter-spacing:.06em;padding:7px 2px 1px;min-height:15px}
   footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
 
   /* ---------- lyrics ---------- */
@@ -466,6 +457,58 @@
     .grp-body{transition:none!important}
     #setPanel,#shareModal .sheet{filter:none!important}
   }
+
+  /* ================= v3：搜索台与工具条 ================= */
+  #deck{position:relative;z-index:2;margin:20px auto 0;padding:16px 14px 10px;text-align:left;
+    background:var(--card);backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);
+    border:1px solid var(--glass-brd);border-radius:26px;box-shadow:var(--shadow), inset 0 1px 0 var(--glass-hi);
+    animation:mistIn var(--t-enter) var(--ease-in) 340ms both}
+  .deck-search{display:flex;align-items:center;gap:9px;border:1px solid var(--glass-brd);border-radius:999px;
+    padding:8px 8px 8px 15px;background:var(--row-hover)}
+  .deck-search .s-ic{color:var(--ink-faint);font-size:14px;line-height:1}
+  .deck-search input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--ink);
+    font-family:inherit;font-size:14.5px;letter-spacing:.06em}
+  .deck-search input::placeholder{color:var(--ink-faint)}
+  .deck-search button{flex:none;background:var(--row-on);border:1px solid var(--glass-brd);color:var(--ink-dim);
+    border-radius:999px;padding:7px 18px;font-family:inherit;font-size:12.5px;letter-spacing:.22em;cursor:pointer;
+    transition:color var(--t-micro) var(--ease-in),border-color var(--t-micro) var(--ease-in)}
+  .deck-search button:hover{color:var(--ink)}
+  .deck-search button:disabled{opacity:.55;cursor:default}
+  .deck-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .deck-chips button{background:transparent;border:1px solid var(--glass-brd);color:var(--ink-faint);border-radius:999px;
+    padding:5px 13px;font-family:inherit;font-size:12px;letter-spacing:.14em;cursor:pointer;
+    transition:color var(--t-micro) var(--ease-in),border-color var(--t-micro) var(--ease-in)}
+  .deck-chips button:hover{color:var(--ink);border-color:var(--accent)}
+  #deckRecent{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  #deckRecent:empty{display:none}
+  #deckRecent .rc-lab{font-size:11px;color:var(--ink-faint);letter-spacing:.2em;padding:5px 2px}
+  #deckRecent button{background:transparent;border:none;border-bottom:1px dashed var(--line);color:var(--ink-dim);
+    padding:4px 2px;font-family:inherit;font-size:12px;letter-spacing:.08em;cursor:pointer}
+  #deckRecent button:hover{color:var(--ink)}
+  #deckRes{margin-top:6px}
+  .deck-item{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:12px;cursor:pointer;
+    color:var(--ink-dim);transition:background var(--t-micro) var(--ease-in),color var(--t-micro) var(--ease-in)}
+  .deck-item:hover{background:var(--row-hover)}
+  .deck-item .tt{flex:1;min-width:0;font-size:13.5px;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .deck-item .tt .ar{color:var(--ink-faint);font-size:12px;margin-left:7px}
+  .deck-item .tag{flex:none;font-size:10px;letter-spacing:.12em;color:var(--ink-faint);
+    border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .deck-item .tag.lib{color:var(--accent-d);border-color:var(--accent-l)}
+  .deck-item .dur{flex:none;font-size:11.5px;color:var(--ink-faint);letter-spacing:.05em}
+  .deck-item.busy{opacity:.55;pointer-events:none}
+  #deckMsg{font-size:12px;color:var(--ink-faint);letter-spacing:.08em;padding:8px 2px 2px;min-height:16px}
+  #toolRow{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap}
+  #toolRow button{background:none;border:none;color:var(--ink-faint);font-family:inherit;font-size:12px;
+    letter-spacing:.3em;cursor:pointer;padding:8px 12px;transition:color var(--t-micro) var(--ease-in)}
+  #toolRow button:hover{color:var(--ink)}
+  #srcBadge{font-size:11.5px;letter-spacing:.18em;color:var(--ink-faint);padding:8px 6px}
+  #toolMsg{text-align:center;font-size:11.5px;color:var(--ink-faint);letter-spacing:.14em;min-height:14px;margin-top:2px}
+
+  /* ================= v3：逐字歌词（网易云 YRC，经 Worker /lyric） =================
+     逐字行带 words 数组；渲染时当前行拆成逐字 span，本函数的 tick 逐字点亮压过原行扫光。
+     没有逐字数据的歌维持原 LRCLIB 逐行扫光，互不影响。 */
+  #lrcScroll p .wd{display:inline-block}
+  #stageScroll p .wd{display:inline-block}
 </style>
 </head>
 <body>
@@ -473,7 +516,7 @@
 <div class="grain"></div>
 <main>
   <div id="setShield" aria-hidden="true"></div>
-  <div class="kicker">by0628 · songs</div>
+  <div class="kicker">by0628 · songs<span id="kickDate"></span></div>
   <h1>雾中来信</h1>
   <p class="sub">一些在深夜里写下的歌。<br>不赶时间，慢慢听。</p>
   <div id="ctlWrap">
@@ -526,7 +569,32 @@
     </div>
   </div>
   <div class="rule"></div>
+  <div id="deck">
+    <div class="deck-search">
+      <span class="s-ic">♪</span>
+      <input id="deckQ" type="text" placeholder="搜一首库里没有的歌" autocomplete="off">
+      <button id="deckGo" type="button">搜索</button>
+    </div>
+    <div class="deck-chips" id="deckChips">
+      <button type="button" data-singer="周杰伦">周杰伦</button>
+      <button type="button" data-singer="林俊杰">林俊杰</button>
+      <button type="button" data-singer="陈奕迅">陈奕迅</button>
+      <button type="button" data-singer="李荣浩">李荣浩</button>
+      <button type="button" data-singer="邓紫棋">邓紫棋</button>
+      <button type="button" id="chipRandom">随机一首</button>
+      <button type="button" id="chipDaily">今日推荐</button>
+    </div>
+    <div id="deckRecent"></div>
+    <div id="deckRes"></div>
+    <div id="deckMsg"></div>
+  </div>
   <div id="player"></div>
+  <div id="toolRow">
+    <button id="dlBtn" type="button">下载这首</button>
+    <button id="cpBtn" type="button">复制歌名</button>
+    <span id="srcBadge">当前线路 · —</span>
+  </div>
+  <div id="toolMsg"></div>
   <button id="dailyCard" type="button" disabled><span class="dk">今晚这首</span><span class="dv">—</span></button>
   <button id="shareBtn" class="txt-btn" type="button">分 享 图</button>
   <div id="skeleton" aria-hidden="true">
@@ -535,15 +603,6 @@
     <div id="skeletonMsg"></div>
   </div>
   <div id="groups" style="display:none"></div>
-  <div id="onlineBox">
-    <div class="ob-t">在 线 点 歌 · 库 里 没 有 的 歌</div>
-    <div class="ob-r">
-      <input id="obTitle" type="text" placeholder="歌名" autocomplete="off">
-      <input id="obArtist" type="text" placeholder="歌手（可空）" autocomplete="off">
-      <button id="obGo" type="button">点歌</button>
-    </div>
-    <div id="obMsg"></div>
-  </div>
   <div id="lrcPanel"><div id="lrcScroll"></div></div>
   <div id="lrcNote"></div>
   <button id="stageBtn">全 屏 歌 词</button>
@@ -673,57 +732,325 @@
     return p;
   }
 
-  /* ---------------- 在线点歌：库里没有的歌，向音源现取现播 ---------------- */
+  /* ---------------- 搜索台：搜库外歌曲出候选列表，点哪首播哪首（Worker v2） ----------------
+     Worker 还是 v1 时 /search、/play 不存在，自动退回 /resolve 直达取链，功能不中断。 */
   (function(){
-    var box=document.getElementById('onlineBox'); if(!box) return;
-    var tIn=document.getElementById('obTitle'), aIn=document.getElementById('obArtist'),
-        go=document.getElementById('obGo'), msg=document.getElementById('obMsg');
+    var deck=document.getElementById('deck'); if(!deck) return;
+    var qIn=document.getElementById('deckQ'), goBtn=document.getElementById('deckGo'),
+        resBox=document.getElementById('deckRes'), msg=document.getElementById('deckMsg');
+    var API_BASE=SRC_API.replace(/\/resolve$/, '');
     var TT=function(s){ return window.T ? window.T(s) : s; };
-    var libN=-1; /* 库内歌曲数，第一次点歌时定格；之后的都是点歌曲目 */
+    var libN=-1;
     function say(s){ msg.textContent=TT(s); }
-    function busy(b){ go.disabled=b; go.textContent=TT(b?'取链中…':'点歌'); }
-    say('填歌名点「点歌」，从音源现取现播；歌词、封面会自动配。');
-    function playRemote(){
-      var title=(tIn.value||'').trim(), artist=(aIn.value||'').trim();
-      if(!title){ say('先填歌名'); tIn.focus(); return; }
-      if(typeof ap==='undefined' || !ap || !ap.list){ say('播放器还没就绪，等歌单加载完再试'); return; }
-      if(libN<0) libN=ap.list.audios.length;
-      busy(true); say('正在向音源找《'+title+'》，最慢十几秒…');
+    function busy(b){ goBtn.disabled=b; goBtn.textContent=TT(b?'搜索中…':'搜索'); }
+    say('搜歌名或歌手，库里没有的也能播；点歌手名看他的歌。');
+    function fetchJ(url, ms){
       var ctl=('AbortController' in window)?new AbortController():null;
-      var to=setTimeout(function(){ if(ctl) ctl.abort(); }, 20000);
-      fetch(SRC_API+'?title='+encodeURIComponent(title)+'&artist='+encodeURIComponent(artist), ctl?{signal:ctl.signal}:{})
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        clearTimeout(to); busy(false);
-        if(!d || !d.ok || !d.url){ say('音源没找到这首：换个歌名，或把歌手也填上再试'); return; }
-        var ti=title, ar=artist;
-        if(!ar && d.matched && d.matched.indexOf(' - ')>0) ar=d.matched.slice(d.matched.indexOf(' - ')+3);
-        var found=-1;
-        for(var i=0;i<songMeta.length;i++){
-          if(songMeta[i].title===ti && (songMeta[i].artist||'')===ar){ found=i; break; }
-        }
-        if(found>=0 && found<libN){ ap.list.switch(found); ap.play(); say('库里就有这首，已经切过去播了'); return; }
-        if(found>=libN){ /* 点过的歌地址可能过期：换新地址再播 */
-          songSources[found]=[d.url]; srcState[found]={st:'ok', url:d.url};
-          ap.list.audios[found].url=d.url;
-          ap.list.switch(found); ap.play();
-          say('已重新取链：'+ti+(ar?' - '+ar:''));
-          return;
-        }
+      var to=setTimeout(function(){ if(ctl) ctl.abort(); }, ms);
+      return fetch(url, ctl?{signal:ctl.signal}:{}).then(function(r){ return r.json(); })
+        .then(function(d){ clearTimeout(to); return d; })
+        .catch(function(e){ clearTimeout(to); throw e; });
+    }
+    function playerReady(){
+      if(typeof ap==='undefined' || !ap || !ap.list){ say('播放器还没就绪，等歌单加载完再试'); return false; }
+      if(libN<0) libN=ap.list.audios.length;
+      return true;
+    }
+    function findIdx(title, artist){
+      for(var i=0;i<songMeta.length;i++){
+        if(songMeta[i].title===title && (songMeta[i].artist||'')===(artist||'')) return i;
+      }
+      return -1;
+    }
+    /* 把一首远程歌放进播放器：库里有→切过去；点过→换新地址；新的→追加到列表末尾 */
+    function addRemote(title, artist, url){
+      var found=findIdx(title, artist);
+      if(found>=0 && found<libN){ ap.list.switch(found); ap.play(); say('库里就有这首，已经切过去播了'); return; }
+      if(found>=libN){
+        songSources[found]=[url]; srcState[found]={st:'ok', url:url};
+        ap.list.audios[found].url=url;
+        ap.list.switch(found); ap.play();
+        say('已重新取链：'+title+(artist?' - '+artist:''));
+      }else{
         var idx=ap.list.audios.length;
-        songMeta.push({artist:ar, title:ti, file:null, lrcFile:null, lrcSize:0, cover:null});
-        songSources.push([d.url]);
+        songMeta.push({artist:artist, title:title, file:null, lrcFile:null, lrcSize:0, cover:null});
+        songSources.push([url]);
         lyrState.push({status:'idle', lines:null});
         coverState.push({done:false, triedNoDur:false, triedDur:false});
-        srcState.push({st:'ok', url:d.url});
-        ap.list.add([{name:ti, artist:ar||'音源', url:d.url}]);
+        srcState.push({st:'ok', url:url});
+        ap.list.add([{name:title, artist:artist||'音源', url:url}]);
         ap.list.switch(idx); ap.play();
-        say('已点上：'+ti+(ar?' - '+ar:'')+'（音源直连）');
-      })
-      .catch(function(){ clearTimeout(to); busy(false); say('取链超时或网络不通，稍等再试一次'); });
+        say('已点上：'+title+(artist?' - '+artist:'')+'（音源直连）');
+      }
+      if(window.__unsentAddRecent) window.__unsentAddRecent(title, artist);
     }
-    go.addEventListener('click', playRemote);
-    [tIn, aIn].forEach(function(el){ el.addEventListener('keydown', function(e){ if(e.key==='Enter') playRemote(); }); });
+    function directResolve(title, artist){
+      say('正在向音源找《'+title+'》，最慢十几秒…');
+      return fetchJ(SRC_API+'?title='+encodeURIComponent(title)+'&artist='+encodeURIComponent(artist||''), 20000)
+        .then(function(d){
+          if(!d || !d.ok || !d.url){ say('音源没找到这首：换个歌名，或把歌手也带上再试'); return false; }
+          var ar=artist;
+          if(!ar && d.matched && d.matched.indexOf(' - ')>0) ar=d.matched.slice(d.matched.indexOf(' - ')+3);
+          addRemote(title, ar, d.url);
+          return true;
+        })
+        .catch(function(){ say('取链超时或网络不通，稍等再试一次'); return false; });
+    }
+    function playItem(it, row){
+      if(!playerReady()) return;
+      if(row) row.classList.add('busy');
+      say('正在取《'+it.title+'》的播放地址…');
+      fetchJ(API_BASE+'/play?source='+encodeURIComponent(it.source)+'&id='+encodeURIComponent(it.id), 15000)
+        .then(function(d){
+          if(row) row.classList.remove('busy');
+          if(d && d.ok && d.url){ addRemote(it.title, it.artist, d.url); }
+          else directResolve(it.title, it.artist);
+        })
+        .catch(function(){ if(row) row.classList.remove('busy'); directResolve(it.title, it.artist); });
+    }
+    function renderResults(list, q){
+      resBox.innerHTML='';
+      if(!list.length){ say('没搜到，换个关键词试试'); return; }
+      say('找到 '+list.length+' 首，点任意一首播放');
+      list.forEach(function(it){
+        var row=document.createElement('div'); row.className='deck-item';
+        var tt=document.createElement('span'); tt.className='tt'; tt.textContent=it.title;
+        var ar=document.createElement('span'); ar.className='ar'; ar.textContent=it.artist||'';
+        tt.appendChild(ar); row.appendChild(tt);
+        var libIdx=(typeof songMeta!=='undefined') ? findIdx(it.title, it.artist||'') : -1;
+        var tag=document.createElement('span'); tag.className='tag';
+        if(libIdx>=0 && libN>=0 && libIdx<libN){ tag.textContent='库内'; tag.classList.add('lib'); }
+        else tag.textContent=(it.source==='tx'?'QQ':it.source==='kw'?'酷我':it.source==='wy'?'网易云':it.source);
+        row.appendChild(tag);
+        if(it.duration){ var du=document.createElement('span'); du.className='dur'; du.textContent=fmtDur(it.duration); row.appendChild(du); }
+        row.addEventListener('click', function(){
+          if(!playerReady()) return;
+          if(libIdx>=0 && libN>=0 && libIdx<libN){ ap.list.switch(libIdx); ap.play(); say('库里就有这首，已经切过去播了'); return; }
+          playItem(it, row);
+        });
+        resBox.appendChild(row);
+      });
+    }
+    function doSearch(){
+      var q=(qIn.value||'').trim();
+      if(!q){ say('先输入歌名或歌手'); qIn.focus(); return; }
+      if(!playerReady()) return;
+      busy(true); resBox.innerHTML=''; say('正在搜《'+q+'》…');
+      fetchJ(API_BASE+'/search?q='+encodeURIComponent(q), 12000)
+        .then(function(d){
+          busy(false);
+          if(d && d.ok && d.results && d.results.length){ renderResults(d.results, q); }
+          else if(d && d.results){ say('没搜到，换个关键词试试'); }
+          else directResolve(q, ''); /* Worker 还是 v1：没有 /search，退回直达取链 */
+        })
+        .catch(function(){ busy(false); directResolve(q, ''); });
+    }
+    goBtn.addEventListener('click', doSearch);
+    qIn.addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(); });
+    /* 歌手直达 + 随机/今日 */
+    var POOL=[['稻香','周杰伦'],['夜曲','周杰伦'],['江南','林俊杰'],['修炼爱情','林俊杰'],['麻雀','李荣浩'],
+      ['光年之外','邓紫棋'],['孤勇者','陈奕迅'],['体面','于文文'],['消愁','毛不易'],['演员','薛之谦'],
+      ['丑八怪','薛之谦'],['平凡之路','朴树'],['南山南','马頔'],['成都','赵雷'],['岁月神偷','金玟岐'],
+      ['后来','刘若英'],['可惜不是你','梁静茹'],['你要的全拿走','胡彦斌'],['起风了','买辣椒也用券'],['晴天','周杰伦']];
+    var chips=document.getElementById('deckChips');
+    if(chips){
+      chips.addEventListener('click', function(e){
+        var b=e.target.closest('button'); if(!b) return;
+        if(b.hasAttribute('data-singer')){ qIn.value=b.getAttribute('data-singer'); doSearch(); }
+      });
+    }
+    var rnd=document.getElementById('chipRandom'), dly=document.getElementById('chipDaily');
+    if(rnd) rnd.addEventListener('click', function(){
+      if(!playerReady()) return;
+      var p=POOL[Math.floor(Math.random()*POOL.length)];
+      say('随机一首：'+p[0]+' - '+p[1]);
+      directResolve(p[0], p[1]);
+    });
+    if(dly) dly.addEventListener('click', function(){
+      if(!playerReady()) return;
+      var d=new Date(), seed=d.getFullYear()*372+(d.getMonth()+1)*31+d.getDate();
+      var p=POOL[seed%POOL.length];
+      say('今日推荐：'+p[0]+' - '+p[1]);
+      directResolve(p[0], p[1]);
+    });
+  })();
+
+  /* ---------------- 工具条：下载 / 复制歌名 / 线路状态 / 最近点歌 ---------------- */
+  (function(){
+    var TT=function(s){ return window.T ? window.T(s) : s; };
+    var tmsg=document.getElementById('toolMsg');
+    function toolSay(s){ if(tmsg) tmsg.textContent=TT(s); }
+    var kd=document.getElementById('kickDate');
+    if(kd){
+      var d=new Date(), w='日一二三四五六'[d.getDay()], h=d.getHours();
+      kd.textContent=' · 周'+w+((h>=22||h<5)?' 夜':'');
+    }
+    /* 最近点歌（只存歌名歌手，不存地址） */
+    var RKEY='unsentRecentV1', rBox=document.getElementById('deckRecent');
+    function readRecent(){ try{ return JSON.parse(localStorage.getItem(RKEY)||'[]'); }catch(e){ return []; } }
+    function renderRecent(){
+      if(!rBox) return;
+      var list=readRecent(); rBox.innerHTML='';
+      if(!list.length) return;
+      var lab=document.createElement('span'); lab.className='rc-lab'; lab.textContent=TT('最近点过'); rBox.appendChild(lab);
+      list.forEach(function(it){
+        var b=document.createElement('button'); b.type='button'; b.textContent=it.t;
+        b.addEventListener('click', function(){
+          var q=document.getElementById('deckQ'), g=document.getElementById('deckGo');
+          if(q && g){ q.value=it.t; g.click(); }
+        });
+        rBox.appendChild(b);
+      });
+    }
+    window.__unsentAddRecent=function(title, artist){
+      try{
+        var list=readRecent().filter(function(it){ return !(it.t===title && it.a===(artist||'')); });
+        list.unshift({t:title, a:artist||''});
+        localStorage.setItem(RKEY, JSON.stringify(list.slice(0,6)));
+        renderRecent();
+      }catch(e){}
+    };
+    renderRecent();
+    /* 下载 / 复制 */
+    var dl=document.getElementById('dlBtn'), cp=document.getElementById('cpBtn');
+    if(dl) dl.addEventListener('click', function(){
+      if(typeof ap==='undefined' || !ap || !ap.audio){ toolSay('播放器还没就绪'); return; }
+      var i=ap.list.index, m=songMeta[i]; if(!m){ toolSay('先选一首歌'); return; }
+      var url=ap.audio.currentSrc || (ap.list.audios[i] && ap.list.audios[i].url) || '';
+      if(!url){ toolSay('这首还没开始播，先点开它再下载'); return; }
+      var a=document.createElement('a');
+      a.href=url; a.target='_blank'; a.rel='noopener';
+      a.download=(m.artist?m.artist+' - ':'')+m.title;
+      document.body.appendChild(a); a.click(); a.remove();
+      toolSay('已打开这首的音频地址，在新页里保存即可');
+    });
+    if(cp) cp.addEventListener('click', function(){
+      if(typeof ap==='undefined' || !ap){ return; }
+      var m=songMeta[ap.list.index]; if(!m) return;
+      var s=(m.artist?m.artist+' - ':'')+m.title;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(s).then(function(){ toolSay('已复制：'+s); }, function(){ toolSay(s); });
+      }else toolSay(s);
+    });
+    /* 线路状态：轮询当前音频地址，判断走的哪条线 */
+    var badge=document.getElementById('srcBadge'), lastBadge='';
+    function lineOf(u){
+      if(!u) return '—';
+      if(u.indexOf('qqmusic.qq.com')>=0) return '音源 · QQ';
+      if(u.indexOf('kuwo.cn')>=0) return '音源 · 酷我';
+      if(u.indexOf('126.net')>=0) return '音源 · 网易云';
+      if(u.indexOf('jsdelivr')>=0 || u.indexOf('statically')>=0 || u.indexOf('githubusercontent')>=0 || u.indexOf('github.io')>=0) return '仓库线路';
+      return '仓库线路';
+    }
+    setInterval(function(){
+      if(!badge || typeof ap==='undefined' || !ap || !ap.audio) return;
+      var t='当前线路 · '+lineOf(ap.audio.currentSrc||'');
+      if(t!==lastBadge){ lastBadge=t; badge.textContent=TT(t); }
+    }, 1500);
+  })();
+
+
+  /* ---------------- 逐字歌词：网易云 YRC（经 Worker /lyric 取逐字时间轴） ----------------
+     命中逐字的歌：当前行拆成逐字 span 逐个点亮；没命中的歌维持原逐行扫光。
+     数据只进独立通道，不覆盖 LRCLIB/本地歌词；逐字行渲染时 .cur 的行扫光会被压成 0。 */
+  var WORD_API=SRC_API.replace(/\/resolve$/, '/lyric');
+  var wordState=[];
+  function wordKey(m){ return 'unsentWordV1:'+norm(m.artist)+'|'+norm(m.title); }
+  function wordCacheGet(m){
+    try{ var d=JSON.parse(localStorage.getItem(wordKey(m))||'null');
+      if(d && d.lines && d.lines.length) return d.lines;
+    }catch(e){}
+    return null;
+  }
+  function wordCacheSet(m, lines){
+    try{ localStorage.setItem(wordKey(m), JSON.stringify({lines:lines})); }catch(e){}
+  }
+  /* 正在唱的那一行：换行/刷新时给 .cur 拆逐字 span，并记下它属于哪个容器 */
+  function paintWordLine(container){
+    if(!ap) return false;
+    var st=lyrState[curIdx]; if(!st || !st.lines || !st.lines.length) return false;
+    var t=ap.audio.currentTime||0;
+    var lo=0, hi=st.lines.length-1, idx=-1;
+    while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
+    if(idx<0) return false;
+    var line=st.lines[idx]; if(!line.words || !line.words.length) return false;
+    var ps=container.querySelectorAll('p');
+    if(idx>=ps.length) return false;
+    var p=ps[idx];
+    if(p.getAttribute('data-w')===String(idx)) return true;
+    p.setAttribute('data-w', idx);
+    p.style.backgroundImage='none'; /* 逐字模式下关掉整行扫光背景，避免两套效果打架 */
+    p.textContent='';
+    line.words.forEach(function(w){
+      var s=document.createElement('span'); s.className='wd'; s.textContent=w.w;
+      p.appendChild(s);
+    });
+    /* 点歌词行跳转沿用原行逻辑（原 buildLines 的点击是走 textContent 建的，这里补回） */
+    p.addEventListener('click', function(){ if(ap){ ap.audio.currentTime=line.t+0.01; ap.play(); } });
+    return true;
+  }
+  var wordTickBusy=false;
+  function wordTick(){
+    if(wordTickBusy) return; wordTickBusy=true;
+    try{
+      var st=lyrState[curIdx];
+      var has=!!(st && st.lines && st.lines.length && st.lines.some(function(l){ return l.words; }));
+      [lrcScroll, stageScroll].forEach(function(c){
+        if(!has) return;
+        if(paintWordLine(c)){
+          var cur=c.querySelector('p.cur'); if(!cur) return;
+          cur.style.setProperty('--p','0%'); /* 当前行改逐字点亮，压掉整行扫光 */
+          var t=ap.audio.currentTime||0;
+          var spans=cur.querySelectorAll('.wd');
+          var line=st.lines[curLine];
+          if(!line || !line.words) return;
+          line.words.forEach(function(w, wi){
+            var s=spans[wi]; if(!s) return;
+            var on = t*1000 >= w.t + Math.max(60, w.d*0.35);
+            s.style.color = on ? 'var(--accent-d)' : '';
+            s.style.webkitTextFillColor = on ? 'var(--accent-d)' : '';
+          });
+        }
+      });
+    }catch(e){}
+    wordTickBusy=false;
+  }
+  setInterval(wordTick, 90);
+  /* 取逐字歌词：缓存 → Worker；命中后写进 lyrState 行对象并重绘（保持当前行位置） */
+  function loadWords(i){
+    if(wordState[i] && wordState[i].st!=='idle') return;
+    var m=songMeta[i]; if(!m) return;
+    wordState[i]={st:'busy'};
+    var apply=function(lines){
+      wordState[i]={st:'done'};
+      var st=lyrState[i]; if(!st || !st.lines || !st.lines.length) return;
+      var used=0;
+      lines.forEach(function(wl){
+        var cand=null, bd=1e9;
+        st.lines.forEach(function(l){
+          var d=Math.abs(l.t - wl.t/1000);
+          if(d<bd){ bd=d; cand=l; }
+        });
+        if(cand && bd<=1.6){ cand.words=wl.words; used++; }
+      });
+      if(used && i===curIdx){ buildLines(lrcScroll, st.lines); buildLines(stageScroll, st.lines); syncLyrics(true); }
+    };
+    var cached=wordCacheGet(m);
+    if(cached){ apply(cached); return; }
+    var ctl=('AbortController' in window)?new AbortController():null;
+    var to=setTimeout(function(){ if(ctl) ctl.abort(); }, 12000);
+    fetch(WORD_API+'?title='+encodeURIComponent(m.title)+'&artist='+encodeURIComponent(m.artist||''), ctl?{signal:ctl.signal}:{})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        clearTimeout(to);
+        if(d && d.ok && d.lines && d.lines.length){ wordCacheSet(m, d.lines); apply(d.lines); }
+        else wordState[i]={st:'done'};
+      })
+      .catch(function(){ clearTimeout(to); wordState[i]={st:'done'}; });
+  }
+  (function(){
+    var origLoad=loadLyrics;
+    loadLyrics=function(i){ origLoad(i); loadWords(i); };
   })();
 
   /* ---------------- lyrics engine ---------------- */
