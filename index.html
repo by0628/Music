@@ -737,23 +737,97 @@
       var c=JSON.parse(localStorage.getItem(ck)||'null');
       if(c && c.url && (Date.now()-c.t)<50*60000){ srcState[i]={st:'ok', url:c.url}; prependSrc(i, c.url); return Promise.resolve(c.url); }
     }catch(e){}
-    var ctl=('AbortController' in window)?new AbortController():null;
-    var to=setTimeout(function(){ if(ctl) ctl.abort(); }, 14000);
-    var p=fetch(SRC_API+'?title='+encodeURIComponent(meta.title)+'&artist='+encodeURIComponent(meta.artist||''), ctl?{signal:ctl.signal}:{});
-    p=p.then(function(r){ return r.json(); }).then(function(d){
-      clearTimeout(to);
-      if(d && d.ok && d.url){
-        srcState[i]={st:'ok', url:d.url};
-        try{ localStorage.setItem(ck, JSON.stringify({url:d.url, t:Date.now()})); }catch(e){}
-        prependSrc(i, d.url);
-        return d.url;
+    var p=new Promise(function(done){
+      var finished=false, wDone=false, lDone=false, lStarted=false;
+      function win(url){
+        if(finished) return; finished=true;
+        srcState[i]={st:'ok', url:url};
+        try{ localStorage.setItem(ck, JSON.stringify({url:url, t:Date.now()})); }catch(e){}
+        prependSrc(i, url);
+        done(url);
       }
-      srcState[i]={st:'fail'};
-      return '';
-    }).catch(function(){ clearTimeout(to); srcState[i]={st:'fail'}; return ''; });
+      function legFail(){
+        if(finished || !wDone || !lDone) return;
+        finished=true; srcState[i]={st:'fail'}; done('');
+      }
+      function kickLocal(){
+        if(lStarted || finished) return; lStarted=true;
+        localResolve(meta.title, meta.artist||'').then(function(d){
+          lDone=true;
+          if(d && d.ok && d.url) win(d.url); else legFail();
+        }).catch(function(){ lDone=true; legFail(); });
+      }
+      var ctl=('AbortController' in window)?new AbortController():null;
+      var to=setTimeout(function(){ if(ctl) ctl.abort(); }, 14000);
+      fetch(SRC_API+'?title='+encodeURIComponent(meta.title)+'&artist='+encodeURIComponent(meta.artist||''), ctl?{signal:ctl.signal}:{})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          clearTimeout(to); wDone=true;
+          if(d && d.ok && d.url) win(d.url); else { kickLocal(); legFail(); }
+        })
+        .catch(function(){ clearTimeout(to); wDone=true; kickLocal(); legFail(); });
+      setTimeout(kickLocal, 5000); /* 中转 5 秒没结果就并行本地直连（不开梯子时中转常连不上） */
+    });
     srcState[i]={st:'pending', p:p};
     return p;
   }
+
+  /* ---------------- 本地直连解析：不开梯子时 Worker（workers.dev）在国内常连不上，
+     这一套在浏览器里直接问国内接口：QQ 联想搜索（JSONP）→ tang 取链（CORS 全开）；
+     酷我按 rid 走 nmobi 取链（CORS 全开）。与 Worker 同一套接口、同一种返回形状。 ---------------- */
+  function fetchJT(url, ms){
+    var ctl=('AbortController' in window)?new AbortController():null;
+    var to=setTimeout(function(){ if(ctl) ctl.abort(); }, ms||9000);
+    return fetch(url, ctl?{signal:ctl.signal}:{}).then(function(r){ return r.json(); })
+      .then(function(d){ clearTimeout(to); return d; })
+      .catch(function(e){ clearTimeout(to); throw e; });
+  }
+  function scoreCand(wantT, wantA, gotT, gotA){
+    var t=norm(wantT), a=norm(wantA||''), gt=norm(gotT||''), ga=norm(gotA||'');
+    var s=0;
+    if(t && gt){ if(gt===t) s+=60; else if(gt.indexOf(t)>=0 || t.indexOf(gt)>=0) s+=30; }
+    if(a && ga){ if(ga===a) s+=40; else if(ga.indexOf(a)>=0 || a.indexOf(ga)>=0) s+=20; }
+    return s;
+  }
+  function localPlay(source, id){
+    if(source==='tx'){
+      return fetchJT('https://tang.api.s01s.cn/music_open_api.php?mid='+encodeURIComponent(id), 9000).then(function(d){
+        var u=d && (d.song_play_url_hq || d.song_play_url || d.song_play_url_standard);
+        if(u) return { ok:true, url:u.replace(/^http:\/\//, 'https://'), source:'tx', quality:'320k' };
+        return { ok:false };
+      }).catch(function(){ return { ok:false }; });
+    }
+    if(source==='kw'){
+      return fetchJT('https://nmobi.kuwo.cn/mobi.s?f=web&user=0&source=kwplayerhd_ar_6.6.6.6_tianbao_T1A_qirui.apk&type=convert_url_with_sign&rid='+encodeURIComponent(id)+'&br=320kmp3', 9000).then(function(d){
+        var u=d && d.data && d.data.url;
+        if(u && u!=='None') return { ok:true, url:u.replace(/^http:\/\//, 'https://'), source:'kw', quality:'320k' };
+        return { ok:false };
+      }).catch(function(){ return { ok:false }; });
+    }
+    return Promise.resolve({ ok:false });
+  }
+  function localResolve(title, artist){
+    var key=encodeURIComponent(((artist||'')+' '+title).trim());
+    return jsonp('https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg?key='+key+'&format=jsonp&inCharset=utf-8&outCharset=utf-8', 9000, 'jsonpCallback').then(function(d){
+      var list=(((d||{}).data||{}).song||{}).itemlist||[];
+      var best=null, bs=-1;
+      list.forEach(function(it){ var sc=scoreCand(title, artist, it.name, it.singer); if(sc>bs){ bs=sc; best=it; } });
+      if(!best || bs<55) return { ok:false };
+      return localPlay('tx', best.mid).then(function(r){
+        if(r && r.ok) r.matched=best.name+' - '+best.singer;
+        return r;
+      });
+    }).catch(function(){ return { ok:false }; });
+  }
+  function localSearch(q){
+    return jsonp('https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg?key='+encodeURIComponent(q)+'&format=jsonp&inCharset=utf-8&outCharset=utf-8', 9000, 'jsonpCallback').then(function(d){
+      var list=(((d||{}).data||{}).song||{}).itemlist||[];
+      var out=[];
+      list.forEach(function(it){ if(it.mid && it.name) out.push({ source:'tx', id:it.mid, title:it.name, artist:it.singer||'' }); });
+      return { ok:out.length>0, results:out };
+    }).catch(function(){ return { ok:false, results:[] }; });
+  }
+  window.__localResolve=localResolve; window.__localPlay=localPlay; window.__localSearch=localSearch;
 
   /* ---------------- 搜索台：搜库外歌曲出候选列表，点哪首播哪首（Worker v2） ----------------
      Worker 还是 v1 时 /search、/play 不存在，自动退回 /resolve 直达取链，功能不中断。 */
@@ -833,27 +907,44 @@
     }
     function directResolve(title, artist){
       say('正在向音源找《'+title+'》，最慢十几秒…');
+      function got(d){
+        var ar=artist;
+        if(!ar && d.matched && d.matched.indexOf(' - ')>0) ar=d.matched.slice(d.matched.indexOf(' - ')+3);
+        addRemote(title, ar, d.url);
+        return true;
+      }
+      function viaLocal(){
+        say('音源中转连不上，改走本地直连找《'+title+'》…');
+        return localResolve(title, artist||'').then(function(d){
+          if(d && d.ok && d.url) return got(d);
+          say('音源没找到这首：换个歌名，或把歌手也带上再试');
+          return false;
+        }).catch(function(){ say('取链超时或网络不通，稍等再试一次'); return false; });
+      }
       return fetchJ(SRC_API+'?title='+encodeURIComponent(title)+'&artist='+encodeURIComponent(artist||''), 20000)
         .then(function(d){
-          if(!d || !d.ok || !d.url){ say('音源没找到这首：换个歌名，或把歌手也带上再试'); return false; }
-          var ar=artist;
-          if(!ar && d.matched && d.matched.indexOf(' - ')>0) ar=d.matched.slice(d.matched.indexOf(' - ')+3);
-          addRemote(title, ar, d.url);
-          return true;
+          if(!d || !d.ok || !d.url) return viaLocal();
+          return got(d);
         })
-        .catch(function(){ say('取链超时或网络不通，稍等再试一次'); return false; });
+        .catch(function(){ return viaLocal(); });
     }
     function playItem(it, row){
       if(!playerReady()) return;
       if(row) row.classList.add('busy');
       say('正在取《'+it.title+'》的播放地址…');
+      function viaLocal(){
+        localPlay(it.source, it.id).then(function(d){
+          if(d && d.ok && d.url) addRemote(it.title, it.artist, d.url);
+          else directResolve(it.title, it.artist);
+        }).catch(function(){ directResolve(it.title, it.artist); });
+      }
       fetchJ(API_BASE+'/play?source='+encodeURIComponent(it.source)+'&id='+encodeURIComponent(it.id), 15000)
         .then(function(d){
           if(row) row.classList.remove('busy');
           if(d && d.ok && d.url){ addRemote(it.title, it.artist, d.url); }
-          else directResolve(it.title, it.artist);
+          else viaLocal();
         })
-        .catch(function(){ if(row) row.classList.remove('busy'); directResolve(it.title, it.artist); });
+        .catch(function(){ if(row) row.classList.remove('busy'); viaLocal(); });
     }
     /* 版本标记：带这些字样的多半不是原版录音室版本，排序时往后放（除非用户搜的就是它） */
     var VER_RE=/live|翻唱|伴奏|钢琴|纯音乐|remix|dj|cover|童声|3d环绕|环绕版|慢版|加速版|降调|升调/i;
@@ -917,14 +1008,20 @@
       if(!q){ say('先输入歌名或歌手'); qIn.focus(); return; }
       if(!playerReady()) return;
       busy(true); resBox.innerHTML=''; say('正在搜《'+q+'》…');
+      function viaLocalSearch(){
+        localSearch(q).then(function(d){
+          if(d && d.ok && d.results && d.results.length){ renderResults(d.results, q); }
+          else directResolve(q, '');
+        }).catch(function(){ directResolve(q, ''); });
+      }
       fetchJ(API_BASE+'/search?q='+encodeURIComponent(q), 12000)
         .then(function(d){
           busy(false);
           if(d && d.ok && d.results && d.results.length){ renderResults(d.results, q); }
           else if(d && d.results){ say('没搜到，换个关键词试试'); }
-          else directResolve(q, ''); /* Worker 还是 v1：没有 /search，退回直达取链 */
+          else viaLocalSearch(); /* Worker 还是 v1 或连不上：本地直连搜 QQ */
         })
-        .catch(function(){ busy(false); directResolve(q, ''); });
+        .catch(function(){ busy(false); viaLocalSearch(); });
     }
     goBtn.addEventListener('click', doSearch);
     qIn.addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(); });
