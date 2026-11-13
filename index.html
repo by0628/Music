@@ -844,24 +844,25 @@
       if(!ver && /[（(][^）)]*版[）)]/.test(it.title||'')) r+=6;
       return r;
     }
-    /* 列表封面：先站内 QQ 封面引擎按歌名+歌手查；QQ 搜索对部分网络出口返回空时用 iTunes 兜底。命中写进同一份封面缓存，播放器那边也受益 */
+    /* 列表封面：缓存 → iTunes 先行（全球出口都快且不挑网络；带时长优先、无时长时歌名+歌手全中才用）
+       → QQ 封面引擎兜底（QQ 搜索在部分出口会空等超时，放前面会拖住整条链）。命中写进同一份封面缓存，播放器也受益 */
     function rowCover(img, it){
       var key='unsentCovV1:'+(it.artist||'')+'|'+it.title;
       try{ var c=localStorage.getItem(key); if(c){ img.src=c; return; } }catch(e){}
       var meta={title:it.title, artist:it.artist||''};
+      var done=false;
       function use(url){
-        if(url){ img.src=url; try{ localStorage.setItem(key, url); }catch(e){} }
+        if(url && !done){ done=true; img.src=url; try{ localStorage.setItem(key, url); }catch(e){} }
       }
-      function viaItunes(){
-        if(typeof itunesCover!=='function') return;
+      function viaQQ(){
+        if(typeof qqCover==='function') qqCover(meta, it.duration||null).then(use).catch(function(){});
+      }
+      if(typeof itunesCover==='function'){
         itunesCover(meta, it.duration||null)
           .then(function(u){ return u || itunesCover(meta, null); })
-          .then(use).catch(function(){});
-      }
-      if(typeof qqCover!=='function'){ viaItunes(); return; }
-      qqCover(meta, it.duration||null).then(function(url){
-        if(url) use(url); else viaItunes();
-      }).catch(viaItunes);
+          .then(function(u){ if(u) use(u); else viaQQ(); })
+          .catch(viaQQ);
+      }else viaQQ();
     }
     function renderResults(list, q){
       resBox.innerHTML='';
