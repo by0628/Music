@@ -1041,8 +1041,9 @@
           line.words.forEach(function(w, wi){
             var s=spans[wi]; if(!s) return;
             var on = t*1000 >= w.t + Math.max(60, w.d*0.35);
-            s.style.color = on ? 'var(--accent-d)' : '';
-            s.style.webkitTextFillColor = on ? 'var(--accent-d)' : '';
+            /* 未唱的字必须显式给暗色：.cur 行的文字填充默认是透明的（给扫光渐变让路），不给色就会隐形 */
+            s.style.color = on ? 'var(--accent-d)' : 'var(--sweep-dim)';
+            s.style.webkitTextFillColor = on ? 'var(--accent-d)' : 'var(--sweep-dim)';
           });
         }
       });
