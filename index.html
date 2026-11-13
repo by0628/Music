@@ -504,8 +504,7 @@
   .deck-item .dur{flex:none;font-size:11.5px;color:var(--ink-faint);letter-spacing:.05em}
   .deck-item.busy{opacity:.55;pointer-events:none}
   #deckMsg{font-size:12px;color:var(--ink-faint);letter-spacing:.08em;padding:8px 2px 2px;min-height:16px}
-
-  #playerCard{position:relative;z-index:2;max-width:880px;margin:18px auto 0}
+  #toolRow.in-player{max-width:none;margin:0;position:relative;z-index:1}
   #toolRow{display:flex;justify-content:center;align-items:center;gap:8px;margin:2px auto 0;padding:7px 10px 1px;flex-wrap:wrap;max-width:880px;border-top:1px solid var(--line)}
   #toolRow button{background:none;border:none;color:var(--ink-faint);font-family:inherit;font-size:12px;
     letter-spacing:.3em;cursor:pointer;padding:8px 12px;transition:color var(--t-micro) var(--ease-in)}
@@ -600,13 +599,11 @@
     <div id="deckRes"></div>
     <div id="deckMsg"></div>
   </div>
-  <div id="playerCard">
   <div id="player"></div>
   <div id="toolRow">
     <button id="dlBtn" type="button">下载这首</button>
     <button id="cpBtn" type="button">复制歌名</button>
     <span id="srcBadge">当前线路 · —</span>
-  </div>
   </div>
   <div id="toolMsg"></div>
   <button id="dailyCard" type="button" disabled><span class="dk">今晚这首</span><span class="dv">—</span></button>
@@ -955,6 +952,15 @@
   })();
 
   /* ---------------- 工具条：下载 / 复制歌名 / 线路状态 / 最近点歌 ---------------- */
+    /* 把工具条迁进播放器卡片内部（等 APlayer 生成 .aplayer 后搬家，视觉上与卡片一体） */
+    (function(){
+      var n=0;
+      var iv=setInterval(function(){
+        var apEl=document.querySelector('.aplayer'), tr=document.getElementById('toolRow');
+        if(apEl && tr){ apEl.appendChild(tr); tr.classList.add('in-player'); clearInterval(iv); }
+        else if(++n>40) clearInterval(iv);
+      }, 400);
+    })();
   (function(){
     var TT=function(s){ return window.T ? window.T(s) : s; };
     var tmsg=document.getElementById('toolMsg');
