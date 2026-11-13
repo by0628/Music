@@ -494,6 +494,8 @@
   .deck-item .tag{flex:none;font-size:10px;letter-spacing:.12em;color:var(--ink-faint);
     border:1px solid var(--line);border-radius:999px;padding:2px 8px}
   .deck-item .tag.lib{color:var(--accent-d);border-color:var(--accent-l)}
+  .deck-item .thumb{flex:none;width:44px;height:44px;border-radius:10px;object-fit:cover;
+    background:var(--wash);border:1px solid var(--line)}
   .deck-item .dur{flex:none;font-size:11.5px;color:var(--ink-faint);letter-spacing:.05em}
   .deck-item.busy{opacity:.55;pointer-events:none}
   #deckMsg{font-size:12px;color:var(--ink-faint);letter-spacing:.08em;padding:8px 2px 2px;min-height:16px}
@@ -763,6 +765,14 @@
       return -1;
     }
     /* 把一首远程歌放进播放器：库里有→切过去；点过→换新地址；新的→追加到列表末尾 */
+    function coverRetry(idx){
+      [4500, 11000].forEach(function(ms){
+        setTimeout(function(){
+          var st=coverState[idx];
+          if(st && !st.done){ st.triedDur=false; st.triedNoDur=false; loadCover(idx, !!(typeof durations!=='undefined' && durations[idx])); }
+        }, ms);
+      });
+    }
     function addRemote(title, artist, url){
       var found=findIdx(title, artist);
       if(found>=0 && found<libN){ ap.list.switch(found); ap.play(); say('库里就有这首，已经切过去播了'); return; }
@@ -771,6 +781,7 @@
         ap.list.audios[found].url=url;
         ap.list.switch(found); ap.play();
         say('已重新取链：'+title+(artist?' - '+artist:''));
+        coverRetry(found);
       }else{
         var idx=ap.list.audios.length;
         songMeta.push({artist:artist, title:title, file:null, lrcFile:null, lrcSize:0, cover:null});
@@ -781,6 +792,7 @@
         ap.list.add([{name:title, artist:artist||'音源', url:url}]);
         ap.list.switch(idx); ap.play();
         say('已点上：'+title+(artist?' - '+artist:'')+'（音源直连）');
+        coverRetry(idx);
       }
       if(window.__unsentAddRecent) window.__unsentAddRecent(title, artist);
     }
@@ -808,12 +820,35 @@
         })
         .catch(function(){ if(row) row.classList.remove('busy'); directResolve(it.title, it.artist); });
     }
+    /* 版本标记：带这些字样的多半不是原版录音室版本，排序时往后放（除非用户搜的就是它） */
+    var VER_RE=/live|翻唱|伴奏|钢琴|纯音乐|remix|dj|cover|童声|3d环绕|环绕版|慢版|加速版|降调|升调/i;
+    function rankOf(it, q){
+      var r=(it.source==='tx'?0:2);
+      if(norm(it.title)===norm(q)) r-=4;
+      var ver=VER_RE.test(it.title||'');
+      if(ver && !VER_RE.test(q)) r+=10;
+      if(!ver && /[（(][^）)]*版[）)]/.test(it.title||'')) r+=6;
+      return r;
+    }
+    /* 列表封面：复用站内 QQ 封面引擎按歌名+歌手查，命中写进同一份封面缓存，播放器那边也受益 */
+    function rowCover(img, it){
+      var key='unsentCovV1:'+(it.artist||'')+'|'+it.title;
+      try{ var c=localStorage.getItem(key); if(c){ img.src=c; return; } }catch(e){}
+      if(typeof qqCover!=='function') return;
+      qqCover({title:it.title, artist:it.artist||''}, it.duration||null).then(function(url){
+        if(url){ img.src=url; try{ localStorage.setItem(key, url); }catch(e){} }
+      }).catch(function(){});
+    }
     function renderResults(list, q){
       resBox.innerHTML='';
       if(!list.length){ say('没搜到，换个关键词试试'); return; }
       say('找到 '+list.length+' 首，点任意一首播放');
-      list.forEach(function(it){
+      var sorted=list.slice().sort(function(a,b){ return rankOf(a,q)-rankOf(b,q); });
+      sorted.forEach(function(it){
         var row=document.createElement('div'); row.className='deck-item';
+        var img=document.createElement('img'); img.className='thumb'; img.alt=''; img.loading='lazy';
+        row.appendChild(img);
+        rowCover(img, it);
         var tt=document.createElement('span'); tt.className='tt'; tt.textContent=it.title;
         var ar=document.createElement('span'); ar.className='ar'; ar.textContent=it.artist||'';
         tt.appendChild(ar); row.appendChild(tt);
@@ -948,7 +983,6 @@
       if(t!==lastBadge){ lastBadge=t; badge.textContent=TT(t); }
     }, 1500);
   })();
-
 
   /* ---------------- 逐字歌词：网易云 YRC（经 Worker /lyric 取逐字时间轴） ----------------
      命中逐字的歌：当前行拆成逐字 span 逐个点亮；没命中的歌维持原逐行扫光。
