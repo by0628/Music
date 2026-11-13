@@ -772,6 +772,20 @@
           if(st && !st.done){ st.triedDur=false; st.triedNoDur=false; loadCover(idx, !!(typeof durations!=='undefined' && durations[idx])); }
         }, ms);
       });
+      /* QQ 封面搜索对部分网络出口直接返回空（海外出口尤甚）：最后用 iTunes 兜底捞一次，歌名+歌手全中才用 */
+      setTimeout(function(){
+        var st=coverState[idx]; if(!st || st.done) return;
+        var m=songMeta[idx]; if(!m || typeof itunesCover!=='function') return;
+        itunesCover(m, (typeof durations!=='undefined' && durations[idx]) || null)
+          .then(function(u){ return u || itunesCover(m, null); })
+          .then(function(u){
+            if(u && !coverState[idx].done){
+              coverState[idx].done=true;
+              try{ localStorage.setItem('unsentCovV1:'+(m.artist||'')+'|'+m.title, u); }catch(e){}
+              applyCover(idx, u);
+            }
+          }).catch(function(){});
+      }, 15000);
     }
     function addRemote(title, artist, url){
       var found=findIdx(title, artist);
@@ -830,14 +844,24 @@
       if(!ver && /[（(][^）)]*版[）)]/.test(it.title||'')) r+=6;
       return r;
     }
-    /* 列表封面：复用站内 QQ 封面引擎按歌名+歌手查，命中写进同一份封面缓存，播放器那边也受益 */
+    /* 列表封面：先站内 QQ 封面引擎按歌名+歌手查；QQ 搜索对部分网络出口返回空时用 iTunes 兜底。命中写进同一份封面缓存，播放器那边也受益 */
     function rowCover(img, it){
       var key='unsentCovV1:'+(it.artist||'')+'|'+it.title;
       try{ var c=localStorage.getItem(key); if(c){ img.src=c; return; } }catch(e){}
-      if(typeof qqCover!=='function') return;
-      qqCover({title:it.title, artist:it.artist||''}, it.duration||null).then(function(url){
+      var meta={title:it.title, artist:it.artist||''};
+      function use(url){
         if(url){ img.src=url; try{ localStorage.setItem(key, url); }catch(e){} }
-      }).catch(function(){});
+      }
+      function viaItunes(){
+        if(typeof itunesCover!=='function') return;
+        itunesCover(meta, it.duration||null)
+          .then(function(u){ return u || itunesCover(meta, null); })
+          .then(use).catch(function(){});
+      }
+      if(typeof qqCover!=='function'){ viaItunes(); return; }
+      qqCover(meta, it.duration||null).then(function(url){
+        if(url) use(url); else viaItunes();
+      }).catch(viaItunes);
     }
     function renderResults(list, q){
       resBox.innerHTML='';
