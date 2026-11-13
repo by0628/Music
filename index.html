@@ -602,6 +602,59 @@
     return list;
   }
 
+  /* ---------------- 音源线路：Worker 中转现查现解析，排在仓库线路之前，失败自动落回 ---------------- */
+  var SRC_API='https://music-source.by120628.workers.dev/resolve';
+  var srcState=[];
+  function prependSrc(i, url){
+    var srcs=songSources[i]; if(!srcs) return;
+    if(srcs[0]!==url){
+      var ix=srcs.indexOf(url); if(ix>0) srcs.splice(ix,1);
+      srcs.unshift(url);
+    }
+    if(typeof ap!=='undefined' && ap && ap.list && ap.list.audios && ap.list.audios[i]){
+      if(ap.list.index!==i || (ap.audio && ap.audio.paused)) ap.list.audios[i].url=url;
+    }
+  }
+  function applySrcNow(i, url){
+    if(!ap || ap.list.index!==i || !ap.audio) return;
+    var a=ap.audio;
+    if(a.currentTime>3) return; /* 已经听上了就不打断 */
+    var wasPaused=a.paused, t=a.currentTime||0;
+    ap.list.audios[i].url=url;
+    a.src=url;
+    try{ a.currentTime=t; }catch(e){}
+    if(!wasPaused) ap.play();
+  }
+  function resolveSrc(i){
+    var meta=songMeta[i]; if(!meta) return Promise.resolve('');
+    if(srcState[i]){
+      if(srcState[i].st==='ok') return Promise.resolve(srcState[i].url);
+      if(srcState[i].st==='fail') return Promise.resolve('');
+      if(srcState[i].p) return srcState[i].p;
+    }
+    var ck='unsentSrcV1:'+(meta.artist||'')+'|'+meta.title;
+    try{
+      var c=JSON.parse(localStorage.getItem(ck)||'null');
+      if(c && c.url && (Date.now()-c.t)<50*60000){ srcState[i]={st:'ok', url:c.url}; prependSrc(i, c.url); return Promise.resolve(c.url); }
+    }catch(e){}
+    var ctl=('AbortController' in window)?new AbortController():null;
+    var to=setTimeout(function(){ if(ctl) ctl.abort(); }, 14000);
+    var p=fetch(SRC_API+'?title='+encodeURIComponent(meta.title)+'&artist='+encodeURIComponent(meta.artist||''), ctl?{signal:ctl.signal}:{});
+    p=p.then(function(r){ return r.json(); }).then(function(d){
+      clearTimeout(to);
+      if(d && d.ok && d.url){
+        srcState[i]={st:'ok', url:d.url};
+        try{ localStorage.setItem(ck, JSON.stringify({url:d.url, t:Date.now()})); }catch(e){}
+        prependSrc(i, d.url);
+        return d.url;
+      }
+      srcState[i]={st:'fail'};
+      return '';
+    }).catch(function(){ clearTimeout(to); srcState[i]={st:'fail'}; return ''; });
+    srcState[i]={st:'pending', p:p};
+    return p;
+  }
+
   /* ---------------- lyrics engine ---------------- */
   function parseLrc(text){
     var out=[];
@@ -932,6 +985,7 @@
       if(!songSources || songSources.length<2) return;
       var nx=(curIdx+1)%songSources.length;
       if(nx===curIdx || !songSources[nx] || !songSources[nx][0]) return;
+      resolveSrc(nx);
       var u=songSources[nx][0];
       if(u===warmUrl) return; warmUrl=u;
       if(!warmAudio){ warmAudio=new Audio(); warmAudio.preload='auto'; }
@@ -2125,6 +2179,7 @@
         applyStageBg();
         updateMS();
         warmNext();
+        var li=curIdx; resolveSrc(li).then(function(u){ if(u) applySrcNow(li, u); });
       });
       buildGroups();
       initPlayMemory();
@@ -2136,6 +2191,7 @@
       warmNext();
       var idx0=(ap&&ap.list&&typeof ap.list.index==='number')?ap.list.index:curIdx;  /* 暂停态下 list.switch 不触发 listswitch 事件，curIdx 还停在 0；以播放器自己的当前序号为准 */
       curIdx=idx0;
+      resolveSrc(idx0).then(function(u){ if(u) applySrcNow(idx0, u); });
       var initMeta=songMeta[idx0]||songMeta[0];
       stageTitle.textContent=T((initMeta.artist ? initMeta.artist+' - ' : '')+initMeta.title);
       updateDocTitle();
