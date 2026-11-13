@@ -167,6 +167,12 @@
   footer{position:relative;z-index:2;text-align:center;color:var(--ink-faint);font-size:12px;letter-spacing:.3em;padding:0 20px 46px}
 
   /* ---------- lyrics ---------- */
+  #lrcTools{justify-content:center;align-items:center;gap:9px;margin:14px auto 0}
+  #lrcTools .lt-lab{font-size:11px;letter-spacing:.25em;color:var(--ink-faint)}
+  #lrcTools button{background:none;border:1px solid var(--line);border-radius:999px;color:var(--ink-dim);
+    font-family:inherit;font-size:11.5px;padding:4px 12px;cursor:pointer;letter-spacing:.05em}
+  #lrcTools button:hover{color:var(--ink);border-color:var(--accent)}
+  #lrcOffVal{min-width:60px}
   #stageBtn{display:none;margin:26px auto 0;padding:10px 26px;background:var(--card);color:var(--ink-dim);
     backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);
     border:1px solid var(--glass-brd);border-radius:999px;font-family:inherit;font-size:13px;letter-spacing:.35em;cursor:pointer;
@@ -617,6 +623,12 @@
   <div id="lrcPanel"><div id="lrcScroll"></div></div>
   <div id="lrcNote"></div>
   <button id="stageBtn">全 屏 歌 词</button>
+  <div id="lrcTools" style="display:none">
+    <span class="lt-lab">歌词对齐</span>
+    <button id="lrcBack" type="button" title="歌词亮得太早时点：整体往后推">−0.5s</button>
+    <button id="lrcOffVal" type="button" title="点这里清零">0.0s</button>
+    <button id="lrcFwd" type="button" title="歌词亮得太晚时点：整体往前提">+0.5s</button>
+  </div>
 </main>
 <footer>写给每一个还没睡的人</footer>
 
@@ -1051,7 +1063,7 @@
   function paintWordLine(container){
     if(!ap) return false;
     var st=lyrState[curIdx]; if(!st || !st.lines || !st.lines.length) return false;
-    var t=ap.audio.currentTime||0;
+    var t=(ap.audio.currentTime||0)+curLrcOff();
     var lo=0, hi=st.lines.length-1, idx=-1;
     while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
     if(idx<0) return false;
@@ -1068,7 +1080,7 @@
       p.appendChild(s);
     });
     /* 点歌词行跳转沿用原行逻辑（原 buildLines 的点击是走 textContent 建的，这里补回） */
-    p.addEventListener('click', function(){ if(ap){ ap.audio.currentTime=line.t+0.01; ap.play(); } });
+    p.addEventListener('click', function(){ if(ap){ ap.audio.currentTime=Math.max(0, line.t-curLrcOff())+0.01; ap.play(); } });
     return true;
   }
   var wordTickBusy=false;
@@ -1082,7 +1094,7 @@
         if(paintWordLine(c)){
           var cur=c.querySelector('p.cur'); if(!cur) return;
           cur.style.setProperty('--p','0%'); /* 当前行改逐字点亮，压掉整行扫光 */
-          var t=ap.audio.currentTime||0;
+          var t=(ap.audio.currentTime||0)+curLrcOff();
           var spans=cur.querySelectorAll('.wd');
           var line=st.lines[curLine];
           if(!line || !line.words) return;
@@ -1137,6 +1149,14 @@
   })();
 
   /* ---------------- lyrics engine ---------------- */
+  /* 歌词时间对齐：同一首歌不同版本的音频前奏长短不一，歌词常整首差几秒。
+     每首歌单独记一个偏移（秒，存本地），比较歌词时间时把播放时间加上它。 */
+  var lrcOffStore={};
+  try{ lrcOffStore=JSON.parse(localStorage.getItem('unsentLrcOffV1')||'{}')||{}; }catch(e){ lrcOffStore={}; }
+  function lrcOffKey(m){ return m ? ((m.artist||'')+'|'+(m.title||'')) : ''; }
+  function lrcOffAt(idx){ var m=songMeta[idx]; var v=m?lrcOffStore[lrcOffKey(m)]:0; return (typeof v==='number'&&isFinite(v))?v:0; }
+  function curLrcOff(){ return lrcOffAt(curIdx); }
+  function setLrcOff(idx, v){ var m=songMeta[idx]; if(!m) return; var k=lrcOffKey(m); v=Math.round(v*10)/10; if(v) lrcOffStore[k]=v; else delete lrcOffStore[k]; try{ localStorage.setItem('unsentLrcOffV1', JSON.stringify(lrcOffStore)); }catch(e){} }
   function parseLrc(text){
     var out=[];
     (text||'').split(/\r?\n/).forEach(function(line){
@@ -1622,7 +1642,7 @@
     lines.forEach(function(l,i){
       var p=document.createElement('p');
       p.textContent=T(l.text);
-      p.addEventListener('click', function(){ if(ap){ ap.audio.currentTime=l.t+0.01; ap.play(); } });
+      p.addEventListener('click', function(){ if(ap){ ap.audio.currentTime=Math.max(0, l.t-curLrcOff())+0.01; ap.play(); } });
       container.appendChild(p);
     });
   }
@@ -1631,10 +1651,12 @@
     curLine=-1;
     sweepLast={i:-1,p:-1};
     if(!st || st.status!=='done'){
+      if(window.__lrcToolsEl) __lrcToolsEl.style.display='none';
       lrcPanel.style.display='none'; lrcNote.style.display='none'; stageNote.style.display='none';
       setMsLine(''); return;
     }
     if(!st.lines.length){
+      if(window.__lrcToolsEl) __lrcToolsEl.style.display='none';
       lrcPanel.style.display='none';
       lrcNote.textContent=T('这首歌还没有歌词 · 纯享旋律');
       lrcNote.style.display='block';
@@ -1643,6 +1665,7 @@
       setMsLine(''); return;
     }
     lrcNote.style.display='none'; stageNote.style.display='none';
+    if(window.__lrcToolsEl){ __lrcToolsEl.style.display='flex'; paintLrcOff(); }
     buildLines(lrcScroll, st.lines);
     buildLines(stageScroll, st.lines);
     lrcPanel.style.display='block';
@@ -1658,21 +1681,22 @@
     var st=lyrState[curIdx];
     var t=ap.audio.currentTime||0, d=ap.audio.duration||0;
     if(d>0) stageBarFill.style.width=(t/d*100)+'%';
+    var lt=t+curLrcOff(); /* 歌词判定用对齐后的时间 */
     /* 间奏呼吸点：离下一句还远、且当前句已唱完一会儿时显示 */
     var dotsOn=false;
     if(st && st.lines && st.lines.length){
       var li=-1, lo2=0, hi2=st.lines.length-1;
-      while(lo2<=hi2){ var md=(lo2+hi2)>>1; if(st.lines[md].t<=t){ li=md; lo2=md+1; } else hi2=md-1; }
+      while(lo2<=hi2){ var md=(lo2+hi2)>>1; if(st.lines[md].t<=lt){ li=md; lo2=md+1; } else hi2=md-1; }
       var nextT = li+1<st.lines.length ? st.lines[li+1].t : Infinity;
-      if(li===-1) dotsOn = t < st.lines[0].t-1.2;
-      else dotsOn = (nextT-t>6) && (t>st.lines[li].t+3.5);
+      if(li===-1) dotsOn = lt < st.lines[0].t-1.2;
+      else dotsOn = (nextT-lt>6) && (lt>st.lines[li].t+3.5);
     }
     if(panelDotsLine) panelDotsLine.classList.toggle('on', dotsOn);
     document.getElementById('stageDots').classList.toggle('on', dotsOn);
     lrcPanel.classList.toggle('gap', dotsOn);
     if(!st || !st.lines || !st.lines.length) return;
     var lo=0, hi=st.lines.length-1, idx=-1;
-    while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
+    while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=lt){ idx=mid; lo=mid+1; } else hi=mid-1; }
     if(idx===curLine && !force) return;
     curLine=idx;
     /* 锁屏歌词只在换行时改一次 album，不跟着 100ms 扫光 tick 高频重建 metadata */
@@ -1701,7 +1725,7 @@
   function sweepTick(force){
     if(!ap) return;
     var st=lyrState[curIdx]; if(!st || !st.lines || !st.lines.length) return;
-    var t=ap.audio.currentTime||0, d=ap.audio.duration||0;
+    var t=(ap.audio.currentTime||0)+curLrcOff(), d=ap.audio.duration||0;
     var lo=0, hi=st.lines.length-1, idx=-1;
     while(lo<=hi){ var mid=(lo+hi)>>1; if(st.lines[mid].t<=t){ idx=mid; lo=mid+1; } else hi=mid-1; }
     if(idx<0){
@@ -2173,6 +2197,15 @@
   stageBtn.addEventListener('click', function(){
     stage.classList.add('open'); document.body.style.overflow='hidden'; syncLyrics(true);
   });
+  /* 歌词对齐控件：偏移只作用于当前这首歌，存本地长期记住 */
+  var __lrcToolsEl=document.getElementById('lrcTools'); window.__lrcToolsEl=__lrcToolsEl;
+  var lrcOffValEl=document.getElementById('lrcOffVal');
+  function paintLrcOff(){ if(lrcOffValEl){ var v=curLrcOff(); lrcOffValEl.textContent=(v>0?'+':'')+v.toFixed(1)+'s'; } }
+  window.paintLrcOff=paintLrcOff;
+  function bumpLrcOff(dv){ setLrcOff(curIdx, curLrcOff()+dv); paintLrcOff(); syncLyrics(true); sweepTick(true); }
+  document.getElementById('lrcBack').addEventListener('click', function(){ bumpLrcOff(-0.5); });
+  document.getElementById('lrcFwd').addEventListener('click', function(){ bumpLrcOff(0.5); });
+  if(lrcOffValEl) lrcOffValEl.addEventListener('click', function(){ setLrcOff(curIdx, 0); paintLrcOff(); syncLyrics(true); sweepTick(true); });
   function closeStage(){ stage.classList.remove('open'); document.body.style.overflow=''; }
   document.getElementById('stageClose').addEventListener('click', closeStage);
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeStage(); });
