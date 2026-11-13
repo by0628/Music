@@ -952,15 +952,12 @@
   })();
 
   /* ---------------- 工具条：下载 / 复制歌名 / 线路状态 / 最近点歌 ---------------- */
-    /* 把工具条迁进播放器卡片内部（等 APlayer 生成 .aplayer 后搬家，视觉上与卡片一体） */
-    (function(){
-      var n=0;
-      var iv=setInterval(function(){
-        var apEl=document.querySelector('.aplayer'), tr=document.getElementById('toolRow');
-        if(apEl && tr){ apEl.appendChild(tr); tr.classList.add('in-player'); clearInterval(iv); }
-        else if(++n>40) clearInterval(iv);
-      }, 400);
-    })();
+    /* 把工具条迁进播放器卡片内部：播放器是异步生成的（曲库慢时十几秒才出来），
+       一次性等待会错过；改由下面的常驻徽标轮询每 1.5 秒检查一次，没到位就搬 */
+    function relocateTools(){
+      var apEl=document.querySelector('.aplayer'), tr=document.getElementById('toolRow');
+      if(apEl && tr && tr.parentNode!==apEl){ apEl.appendChild(tr); tr.classList.add('in-player'); }
+    }
   (function(){
     var TT=function(s){ return window.T ? window.T(s) : s; };
     var tmsg=document.getElementById('toolMsg');
@@ -1028,6 +1025,7 @@
       return '仓库线路';
     }
     setInterval(function(){
+      relocateTools();
       if(!badge || typeof ap==='undefined' || !ap || !ap.audio) return;
       var t='当前线路 · '+lineOf(ap.audio.currentSrc||'');
       if(t!==lastBadge){ lastBadge=t; badge.textContent=TT(t); }
