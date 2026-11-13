@@ -1285,6 +1285,11 @@
   /* ---------------- auto cover (iTunes) ---------------- */
   function norm(s){ return (s||'').toLowerCase().replace(/[\s\u3000·・'"'"'“”‘’()（）\[\]【】\-—_,，.。!！?？:：;；/\\]/g,''); }
   function itunesCover(meta, dur){
+    /* 台湾/香港商店的歌手名是繁体（周杰倫），站点是简体：比较前先把常见繁体字折成简体，否则歌名歌手永远对不上 */
+    var T2S={'倫':'伦','傑':'杰','陳':'陈','鄧':'邓','劉':'刘','張':'张','楊':'杨','蘇':'苏','華':'华','樂':'乐','飛':'飞','雲':'云','麗':'丽','國':'国','榮':'荣','謙':'谦','靜':'静','孫':'孙','頌':'颂','穎':'颖','兒':'儿','龍':'龙','鳳':'凤','許':'许','鄭':'郑','蕭':'萧','羅':'罗','譚':'谭','盧':'卢','鍾':'钟','馮':'冯','喬':'乔','韋':'韦','韓':'韩','顧':'顾','髮':'发','麼':'么','這':'这','裡':'里','們':'们','為':'为','愛':'爱','還':'还','過':'过','時':'时','間':'间','點':'点','開':'开','關':'关','門':'门','風':'风','葉':'叶','聲':'声','遠':'远','夢':'梦','長':'长','細':'细','說':'说','語':'语','詩':'诗','詞':'词','讓':'让','給':'给','誰':'谁','離':'离','別':'别','場':'场','戲':'戏','劍':'剑','溫':'温','學':'学','會':'会','後':'后','進':'进','連':'连','運':'运','達':'达','選':'选','邊':'边','縣':'县','區':'区','號':'号','線':'线','網':'网','頁':'页','圖':'图','書':'书','畫':'画','實':'实','現':'现','環':'环','繞':'绕','鋼':'钢','純':'纯','歡':'欢','聽':'听','見':'见','親':'亲','總':'总','戀':'恋','單':'单','雙':'双','個':'个','樣':'样','義':'义','氣':'气','靈':'灵','淚':'泪','緒':'绪','碎':'碎','塵':'尘','客':'客','棧':'栈','楓':'枫','淺':'浅','淚':'泪','灣':'湾'};
+    function foldT(s){ return String(s||'').split('').map(function(c){ return T2S[c]||c; }).join(''); }
+    function eqT(a, b){ return norm(foldT(cleanTitle(a||'')))===norm(foldT(cleanTitle(b||''))); }
+    function eqA(a, b){ return norm(foldT(a||''))===norm(foldT(b||'')); }
     var term=(meta.artist?meta.artist+' ':'')+meta.title;
     var url='https://itunes.apple.com/search?term='+encodeURIComponent(term)+'&media=music&entity=song&limit=8&country=TW';
     return fetchT(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
@@ -1295,12 +1300,12 @@
         if(dur){
           var inWin=res.filter(function(x){ return Math.abs((x.trackTimeMillis||0)/1000-dur)<=4; });
           if(!inWin.length) return null;
-          pick=inWin.filter(function(x){ return norm(cleanTitle(x.trackName))===norm(cleanTitle(meta.title)) && norm(x.artistName)===norm(meta.artist); })[0]
-            || inWin.filter(function(x){ return norm(cleanTitle(x.trackName))===norm(cleanTitle(meta.title)); })[0]
-            || inWin.filter(function(x){ return norm(x.artistName)===norm(meta.artist); })[0]
+          pick=inWin.filter(function(x){ return eqT(x.trackName, meta.title) && eqA(x.artistName, meta.artist); })[0]
+            || inWin.filter(function(x){ return eqT(x.trackName, meta.title); })[0]
+            || inWin.filter(function(x){ return eqA(x.artistName, meta.artist); })[0]
             || inWin[0];
         }else{
-          pick=res.filter(function(x){ return norm(cleanTitle(x.trackName))===norm(cleanTitle(meta.title)) && norm(x.artistName)===norm(meta.artist); })[0]||null;
+          pick=res.filter(function(x){ return eqT(x.trackName, meta.title) && eqA(x.artistName, meta.artist); })[0]||null;
         }
         return pick ? pick.artworkUrl100.replace('100x100bb.jpg','600x600bb.jpg') : null;
       });
