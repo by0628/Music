@@ -1286,7 +1286,7 @@
   function norm(s){ return (s||'').toLowerCase().replace(/[\s\u3000·・'"'"'“”‘’()（）\[\]【】\-—_,，.。!！?？:：;；/\\]/g,''); }
   function itunesCover(meta, dur){
     var term=(meta.artist?meta.artist+' ':'')+meta.title;
-    var url='https://itunes.apple.com/search?term='+encodeURIComponent(term)+'&media=music&entity=song&limit=8';
+    var url='https://itunes.apple.com/search?term='+encodeURIComponent(term)+'&media=music&entity=song&limit=8&country=TW';
     return fetchT(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(data){
         var res=(data.results||[]).filter(function(x){ return x.artworkUrl100; });
